@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+title: "WAVE Methodology — Workflow Amplification via Vectored Expertise"
+message: "If you use WAVE in your work, please cite it as below."
+abstract: >-
+  WAVE is an open methodology for human-AI collaboration.
+  It provides a three-layer framework (DataPrep, Prompt2Data, Prompt2Prompt)
+  that amplifies human expertise through structured AI collaboration.
+  The foundational principle is 70/30: seventy percent human preparation,
+  thirty percent AI execution. WAVE is domain-agnostic and applies to
+  software engineering, healthcare, education, law, pharmaceutical research,
+  engineering, and any field where humans work with AI.
+type: software
+authors:
+  - family-names: Zieliński
+    given-names: Przemysław
+    affiliation: "IDareU"
+    country: PL
+keywords:
+  - human-AI collaboration
+  - methodology
+  - workflow amplification
+  - prompt engineering
+  - expertise amplification
+  - AI-assisted work
+  - DataPrep
+  - Prompt2Data
+  - Prompt2Prompt
+license: CC-BY-SA-4.0
+version: 1.0.0
+date-released: "2026-02-15"
+repository-code: "https://github.com/przemekzielinski/WAVE-Methodology"
+url: "https://github.com/przemekzielinski/WAVE-Methodology"
