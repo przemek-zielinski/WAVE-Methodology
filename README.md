@@ -6,7 +6,7 @@
 🇵🇱 *Polska wersja: FALA — Formuła Amplifikacji Ludzkiej Aktywności* → [Metodyka FALA (PL)](docs/FALA_Metodyka_v1.0_PL.md)
 
 [![License: CC BY-SA 4.0](https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-sa/4.0/)
-[![DOI](https://img.shields.io/badge/DOI-pending-blue.svg)](#citation)
+[![DOI](https://zenodo.org/badge/1158733975.svg)](https://doi.org/10.5281/zenodo.18652902)
 
 ---
 
@@ -157,8 +157,8 @@ If you use WAVE in your work, please cite it:
 ```
 Zieliński, P. (2026). WAVE: Workflow Amplification via Vectored Expertise — 
 An Open Methodology for Human-AI Collaboration (v1.0). 
-https://github.com/[username]/WAVE-Methodology
-DOI: [pending]
+https://github.com/przemek-zielinski/WAVE-Methodology
+DOI: 10.5281/zenodo.18652902
 ```
 
 See [CITATION.cff](CITATION.cff) for machine-readable citation data.
