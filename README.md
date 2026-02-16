@@ -175,7 +175,7 @@ You are free to use, adapt, and redistribute WAVE — including for commercial p
 
 ## Author
 
-**Przemysław Zieliński** — Creator of WAVE, CEO of [IDareU](https://idareu.io)  
+**Przemysław Zieliński** — Creator of WAVE, CEO of [IDareU](https://idareu.online)  
 **Claude** (Anthropic) — Documentation collaborator
 
 ---
