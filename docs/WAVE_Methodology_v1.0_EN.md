@@ -472,8 +472,8 @@ If you use WAVE in your work, please cite:
 ```
 Zieliński, P. (2026). WAVE: Workflow Amplification via Vectored Expertise — 
 A Human-AI Collaboration Methodology (v1.0). 
-https://github.com/[username]/WAVE-Methodology
-DOI: [to be assigned upon Zenodo publication]
+https://github.com/przemek-zielinski/WAVE-Methodology
+DOI: 10.5281/zenodo.18652902
 ```
 
 ### Contributing
