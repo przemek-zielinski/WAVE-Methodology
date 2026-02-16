@@ -142,7 +142,7 @@ WAVE launches as a generic methodology from day one. Software engineering is the
 
 ## Origins
 
-WAVE was created in January 2026 by **Przemysław Zieliński** during the development of [IDareU](https://idareu.io) — a gamified learning platform. Working as a solo founder with AI as his primary collaborator, Przemek discovered that the bottleneck was never the AI's intelligence — it was human preparation. Structuring that discovery into a repeatable system produced WAVE.
+WAVE was created in January 2026 by **Przemysław Zieliński** during the development of [IDareU](https://idareu.online) — a gamified learning platform. Working as a solo founder with AI as his primary collaborator, Przemek discovered that the bottleneck was never the AI's intelligence — it was human preparation. Structuring that discovery into a repeatable system produced WAVE.
 
 The methodology was documented with **Claude** (Anthropic) in an intensive collaborative session and refined over the following weeks through practical application.
 
