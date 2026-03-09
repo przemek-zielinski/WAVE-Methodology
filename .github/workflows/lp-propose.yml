@@ -1,1 +1,61 @@
+name: Living Patterns Proposal Generator
 
+on:
+  schedule:
+    # Każdy poniedziałek o 7:00 UTC
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+    inputs:
+      exclude_domains:
+        description: 'Domains to exclude (comma-separated, e.g. "healthcare,education")'
+        required: false
+        default: ''
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Generate proposal
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          EXCLUDE_DOMAINS: ${{ github.event.inputs.exclude_domains || '' }}
+        run: python living-patterns/scripts/propose_lp.py > proposal.json
+
+      - name: Create Issue from proposal
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const proposal = JSON.parse(fs.readFileSync('proposal.json', 'utf8'));
+            
+            if (proposal.status === 'error') {
+              console.log('Script reported error: ' + proposal.message);
+              return;
+            }
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: proposal.title,
+              body: proposal.body,
+              labels: ['living-patterns', 'proposal', 'auto-generated']
+            });
+            
+            console.log('Issue created: ' + proposal.title);
