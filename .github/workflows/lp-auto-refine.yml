@@ -1,0 +1,88 @@
+name: Living Patterns Auto-Refinement
+
+on:
+  schedule:
+    # Pierwszy poniedziałek każdego miesiąca o 8:00 UTC
+    - cron: '0 8 1-7 * 1'
+  workflow_dispatch:
+    inputs:
+      pattern_path:
+        description: 'Path to specific LP file (leave empty for all official patterns)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Dry run — check for updates without creating PR'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-refine:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Run auto-refinement
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          PATTERN_PATH: ${{ github.event.inputs.pattern_path || '' }}
+        run: python living-patterns/scripts/auto_refine.py
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "LP auto-refinement: update Living Patterns"
+          title: "🔄 Living Patterns Auto-Refinement — ${{ github.event.schedule && 'Monthly' || 'Manual' }}"
+          body: |
+            ## Living Patterns Auto-Refinement
+
+            This PR was created automatically by the WAVE Living Patterns auto-refinement workflow.
+
+            **What happened:**
+            - The auto-refinement script checked all official Living Patterns against current web sources
+            - Changes were found and proposed — see modified files below
+
+            **What to do:**
+            - Review each changed file carefully
+            - Check the `CHANGELOG` section at the bottom of each modified pattern
+            - Approve and merge if changes are valid, or close if not
+
+            *Auto-refinement follows the WAVE principle: AI proposes, human approves.*
+          branch: lp-auto-refine/${{ github.run_id }}
+          labels: living-patterns, auto-refinement
+          delete-branch: true
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.changes.outputs.has_changes }}" == "true" ]; then
+            echo "✅ Changes found and PR created. Review and approve."
+          else
+            echo "✅ All Living Patterns are up to date. No changes needed."
+          fi
