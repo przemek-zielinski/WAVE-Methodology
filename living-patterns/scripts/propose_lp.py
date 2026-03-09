@@ -154,6 +154,9 @@ def generate_proposal(client: anthropic.Anthropic, excluded: list[str]) -> dict:
     prompt = PROMPT_S1_S2.format(excluded=excluded_str, today=today)
     text = call_api(client, prompt, max_tokens=3000, use_search=True)
     data = parse_json(text)
+    
+    import time
+    time.sleep(65)
 
     # Call 2: Translate key fields (no web search, minimal tokens)
     translate_prompt = PROMPT_TRANSLATE.format(
