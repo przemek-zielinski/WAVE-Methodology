@@ -85,6 +85,24 @@ Healthcare, education, law, pharmaceutical research, NGO operations, industrial 
 
 **Want to write one?** See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+### 🔧 WAVE Tools: Living Patterns
+
+**Living Patterns** is a WAVE tool for systematically building living knowledge standards with AI.
+
+The problem: every team working with AI starts each session from zero. No systematic knowledge, no repeatability, no confidence that nothing was missed.
+
+Living Patterns solves this with three components:
+
+- **SCAN** — identifies all implementation areas for your project, with goals and parameters
+- **PULSE** — builds a complete knowledge standard in three rounds (build → optimize → finalize)
+- **Living Pattern** — the output: a living document that periodically checks its own freshness
+
+Ready-to-use prompts, step-by-step instructions, and the first official pattern (UX/UI):
+
+→ **[Living Patterns — start here](living-patterns/README.md)**
+
+*Living Patterns work standalone — you don't need to know WAVE to use them. But if you want the full methodology, keep reading above.*
+
 ---
 
 ## Quick Start
