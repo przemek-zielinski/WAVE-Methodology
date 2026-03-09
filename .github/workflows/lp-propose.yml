@@ -37,8 +37,8 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           EXCLUDE_DOMAINS: ${{ github.event.inputs.exclude_domains || '' }}
         run: |
-  python living-patterns/scripts/propose_lp.py > proposal.json 2>&1 || cat proposal.json
-  cat proposal.json
+          python living-patterns/scripts/propose_lp.py > proposal.json 2>&1
+          cat proposal.json
 
       - name: Create Issue from proposal
         uses: actions/github-script@v7
