@@ -1,16 +1,14 @@
 """
-WAVE Living Patterns — Auto-Refinement Script
-Checks official Living Patterns against current web sources
-and proposes updates when relevant changes are found.
+WAVE Living Patterns — Auto-Refinement v3
+Token-optimized: two-step check (header-first, full doc only if changes found).
+Bilingual: detects EN/PL from filename suffix, responds in matching language.
 
-Usage:
-  - Automatically via GitHub Actions (see .github/workflows/lp-auto-refine.yml)
-  - Manually: ANTHROPIC_API_KEY=sk-... python auto_refine.py
+Step 1: Send ONLY header (~200 tokens) → "any changes since [date]?"
+  → If no → done (~1500 tokens total)
+  → If yes → Step 2
+Step 2: Send FULL document → "apply changes" (~12000 tokens)
 
-Environment variables:
-  ANTHROPIC_API_KEY  — required, Anthropic API key
-  DRY_RUN            — optional, "true" to check without modifying files
-  PATTERN_PATH       — optional, path to specific LP file (empty = all official)
+Saves ~80% tokens in months when nothing changes.
 """
 
 import os
@@ -23,46 +21,51 @@ from pathlib import Path
 import anthropic
 
 
-# --- Configuration ---
-
 PATTERNS_DIR = "living-patterns/patterns/official"
 MODEL = "claude-sonnet-4-20250514"
-MAX_TOKENS = 8000
 
-REFINEMENT_PROMPT = """You are performing a WAVE Living Pattern auto-refinement cycle.
+PROMPT_CHECK = """You are checking whether a Living Pattern document needs updating.
 
-I'm giving you an existing Living Pattern document. Your task is to check its freshness against current knowledge.
+The document covers this area:
+- Title: {title}
+- Area: {area}
+- Objective: {objective}
+- Last updated: {last_updated}
+- Language: {language}
 
-STEPS:
-1. Search the web for CHANGES in this area since the document's last update date.
-   Look for: new scientific research, new industry reports, regulatory changes,
-   new tools/frameworks, new case studies, changed best practices.
+Search the web for SIGNIFICANT changes in this area since {last_updated}.
+Look for: new research, new regulations, new tools, changed best practices, new case studies.
 
-2. Compare findings with existing content in the Living Pattern.
+The bar is HIGH: only changes that would affect an implementation decision count.
+Minor trends, opinion pieces, or incremental updates do NOT count.
 
-3. Respond in ONE of two formats:
+Respond in EXACTLY one of two formats:
 
-FORMAT A — No significant changes:
-Start your response with exactly: STATUS: CURRENT
-Then briefly explain what you checked and why no updates are needed.
+If NO significant changes:
+STATUS: CURRENT
+[1-2 sentences explaining what you checked]
 
-FORMAT B — Changes found:
-Start your response with exactly: STATUS: UPDATES_FOUND
-Then for each change provide:
-- WHAT changed (new research / new regulation / new tool / trend shift)
-- SOURCE with date
-- WHICH section of the Living Pattern is affected
-- PROPOSED change (addition / update / removal)
-- PRIORITY (critical / important / cosmetic)
+If changes found:
+STATUS: UPDATES_FOUND
+[For each change: what changed, source with date, which LP section affected, priority (critical/important/cosmetic)]
+"""
 
-Finally, provide the COMPLETE updated Living Pattern document with changes integrated.
-Mark all changes with [AUTO-REFINED {today's date}].
-Update the CHANGELOG table at the bottom.
+PROMPT_UPDATE = """You are updating a Living Pattern document with changes you previously identified.
 
-IMPORTANT: Only propose changes that are SIGNIFICANT — not minor rephrasing or cosmetic edits.
-The bar is: would this change affect an implementation decision?
+Here are the changes to apply:
+{changes}
 
-Today's date: {today}
+Here is the FULL document to update:
+{document}
+
+Rules:
+- Integrate changes naturally into the existing structure
+- Mark each change with [AUTO-REFINED {today}]
+- Update the CHANGELOG table at the bottom
+- Respond in {language} (same language as the document)
+- Output the COMPLETE updated document — nothing else, no preamble
+
+IMPORTANT: Output ONLY the markdown document. No commentary before or after.
 """
 
 
@@ -75,169 +78,191 @@ def find_patterns(specific_path: str = "") -> list[Path]:
         print(f"⚠ Specified path not found: {specific_path}")
         return []
 
-    pattern = os.path.join(PATTERNS_DIR, "LP_*.md")
-    files = [Path(f) for f in glob.glob(pattern)]
+    files = []
+    for suffix in ["_EN.md", "_PL.md"]:
+        files.extend(Path(p) for p in glob.glob(os.path.join(PATTERNS_DIR, f"LP_*{suffix}")))
+
+    # Also check old naming without _EN/_PL
+    for p in glob.glob(os.path.join(PATTERNS_DIR, "LP_*.md")):
+        path = Path(p)
+        if not path.stem.endswith("_EN") and not path.stem.endswith("_PL"):
+            files.append(path)
 
     if not files:
         print(f"⚠ No Living Patterns found in {PATTERNS_DIR}")
 
-    return sorted(files)
+    return sorted(set(files))
 
 
-def extract_last_update(content: str) -> str:
-    """Try to extract last update date from the document."""
-    for line in content.split("\n"):
-        if "Version" in line or "version" in line:
-            # Look for date patterns like "March 2026", "Mar 9, 2026"
+def detect_language(filepath: Path, content: str) -> str:
+    """Detect language from filename suffix or content."""
+    if filepath.stem.endswith("_PL"):
+        return "Polish"
+    if filepath.stem.endswith("_EN"):
+        return "English"
+    # Fallback: check content for Polish characters
+    if any(c in content for c in "ąćęłńóśźżĄĆĘŁŃÓŚŹŻ"):
+        return "Polish"
+    return "English"
+
+
+def extract_header(content: str) -> dict:
+    """Extract title, area, objective, last update from LP header."""
+    header = {"title": "", "area": "", "objective": "", "last_updated": "Unknown"}
+
+    for line in content.split("\n")[:30]:
+        if line.startswith("# Living Pattern:"):
+            header["title"] = line.replace("# ", "").strip()
+            header["area"] = header["title"].replace("Living Pattern: ", "").split("—")[0].strip()
+        if "Objective" in line or "objective" in line or "Funkcja celu" in line:
+            header["objective"] = line.split(":", 1)[-1].strip().strip("*")
+        if "Version" in line or "version" in line or "Wersja" in line:
             for month in ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]:
-                if month in line:
-                    return line.strip()
-    return "Unknown"
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+                          "sty", "lut", "mar", "kwi", "maj", "cze",
+                          "lip", "sie", "wrz", "paź", "lis", "gru"]:
+                if month.lower() in line.lower():
+                    header["last_updated"] = line.split("|")[-1].strip() if "|" in line else line.strip()
+                    break
+
+    return header
+
+
+def call_api(client: anthropic.Anthropic, prompt: str, max_tokens: int, use_search: bool = False) -> str:
+    """Single API call. Returns text content."""
+    kwargs = {
+        "model": MODEL,
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}]
+    }
+    if use_search:
+        kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search"}]
+
+    response = client.messages.create(**kwargs)
+
+    text = ""
+    for block in response.content:
+        if block.type == "text":
+            text += block.text
+    return text.strip()
 
 
 def refine_pattern(client: anthropic.Anthropic, filepath: Path, dry_run: bool) -> bool:
-    """
-    Run auto-refinement on a single Living Pattern.
-    Returns True if changes were made.
-    """
+    """Two-step refinement. Returns True if changes were made."""
     print(f"\n{'='*60}")
     print(f"Processing: {filepath.name}")
     print(f"{'='*60}")
 
     content = filepath.read_text(encoding="utf-8")
-    last_update = extract_last_update(content)
+    language = detect_language(filepath, content)
+    header = extract_header(content)
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    print(f"  Last update: {last_update}")
-    print(f"  Checking against current sources...")
+    print(f"  Language: {language}")
+    print(f"  Area: {header['area']}")
+    print(f"  Last updated: {header['last_updated']}")
 
-    prompt = REFINEMENT_PROMPT.format(today=today)
+    # --- STEP 1: Lightweight check (header only, ~1500 tokens total) ---
+    print(f"  Step 1: Quick check (header only)...")
+
+    check_prompt = PROMPT_CHECK.format(
+        title=header["title"],
+        area=header["area"],
+        objective=header["objective"],
+        last_updated=header["last_updated"],
+        language=language
+    )
 
     try:
-        response = client.messages.create(
-            model=MODEL,
-            max_tokens=MAX_TOKENS,
-            tools=[{
-                "type": "web_search_20250305",
-                "name": "web_search"
-            }],
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"{prompt}\n\n---\n\nLIVING PATTERN DOCUMENT:\n\n{content}"
-                }
-            ]
-        )
+        check_response = call_api(client, check_prompt, max_tokens=1000, use_search=True)
     except anthropic.APIError as e:
-        print(f"  ❌ API error: {e}")
+        print(f"  ❌ API error in Step 1: {e}")
         return False
 
-    # Extract text from response
-    response_text = ""
-    for block in response.content:
-        if block.type == "text":
-            response_text += block.text
-
-    if not response_text:
-        print("  ❌ Empty response from API")
+    if "STATUS: CURRENT" in check_response:
+        summary = check_response.split("STATUS: CURRENT")[-1].strip()[:200]
+        print(f"  ✅ Up to date. {summary}")
         return False
 
-    # Check status
-    if "STATUS: CURRENT" in response_text:
-        print("  ✅ Pattern is up to date. No changes needed.")
-        # Log the check
-        summary = response_text.split("STATUS: CURRENT")[-1].strip()[:200]
-        print(f"  Summary: {summary}")
+    if "STATUS: UPDATES_FOUND" not in check_response:
+        print(f"  ⚠ Unexpected response format in Step 1. Skipping.")
         return False
 
-    if "STATUS: UPDATES_FOUND" in response_text:
-        print("  🔄 Updates found!")
+    # --- STEP 2: Full update (send entire document, ~12000 tokens) ---
+    changes = check_response.split("STATUS: UPDATES_FOUND")[-1].strip()
+    print(f"  Step 2: Changes found — sending full document for update...")
+    print(f"  Changes preview: {changes[:200]}...")
 
-        # Extract the updated document
-        # The full updated LP should be after the analysis
-        # Look for the LP header pattern
-        updated_content = None
-        lines = response_text.split("\n")
-        for i, line in enumerate(lines):
-            if line.startswith("# Living Pattern:"):
-                updated_content = "\n".join(lines[i:])
-                break
+    if dry_run:
+        print(f"  🏃 DRY RUN — changes detected but not applied.")
+        return False
 
-        if not updated_content:
-            print("  ⚠ Could not extract updated document from response.")
-            print("  Full response saved to _refinement_log.md for manual review.")
-            log_path = filepath.parent / f"_refinement_log_{filepath.stem}_{today}.md"
-            log_path.write_text(response_text, encoding="utf-8")
-            return False
+    update_prompt = PROMPT_UPDATE.format(
+        changes=changes,
+        document=content,
+        today=today,
+        language=language
+    )
 
-        if dry_run:
-            print("  🏃 DRY RUN — changes detected but not written.")
-            # Show what changed
-            analysis = response_text.split("# Living Pattern:")[0]
-            print(f"\n  Proposed changes:\n{analysis[:500]}...")
-            return False
+    try:
+        updated_content = call_api(client, update_prompt, max_tokens=8000, use_search=False)
+    except anthropic.APIError as e:
+        print(f"  ❌ API error in Step 2: {e}")
+        return False
 
-        # Write updated file
-        filepath.write_text(updated_content, encoding="utf-8")
-        print(f"  ✅ Updated: {filepath.name}")
-        return True
+    # Validate output starts with markdown header
+    if not updated_content.startswith("#"):
+        print(f"  ⚠ Response doesn't look like a document. Saving log for review.")
+        log_path = filepath.parent / f"_refinement_log_{filepath.stem}_{today}.md"
+        log_path.write_text(f"CHANGES:\n{changes}\n\nRESPONSE:\n{updated_content}", encoding="utf-8")
+        return False
 
-    print("  ⚠ Unexpected response format. Saving log for manual review.")
-    log_path = filepath.parent / f"_refinement_log_{filepath.stem}_{today}.md"
-    log_path.write_text(response_text, encoding="utf-8")
-    return False
+    filepath.write_text(updated_content, encoding="utf-8")
+    print(f"  ✅ Updated: {filepath.name}")
+    return True
 
 
 def main():
-    # Check API key
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        print("❌ ANTHROPIC_API_KEY environment variable not set.")
+        print("❌ ANTHROPIC_API_KEY not set.")
         sys.exit(1)
 
     dry_run = os.environ.get("DRY_RUN", "false").lower() == "true"
     specific_path = os.environ.get("PATTERN_PATH", "")
 
-    print("🌊 WAVE Living Patterns — Auto-Refinement")
+    print("🌊 WAVE Living Patterns — Auto-Refinement v3")
     print(f"   Date: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
     print(f"   Mode: {'DRY RUN' if dry_run else 'LIVE'}")
     print(f"   Target: {specific_path or 'all official patterns'}")
 
-    # Find patterns
     patterns = find_patterns(specific_path)
     if not patterns:
-        print("\nNo patterns to process. Exiting.")
+        print("\nNo patterns to process.")
         sys.exit(0)
 
-    print(f"\nFound {len(patterns)} pattern(s) to check:")
+    print(f"\nFound {len(patterns)} pattern(s):")
     for p in patterns:
-        print(f"  - {p.name}")
+        lang = "PL" if p.stem.endswith("_PL") else "EN" if p.stem.endswith("_EN") else "??"
+        print(f"  - {p.name} [{lang}]")
 
-    # Initialize Anthropic client
     client = anthropic.Anthropic(api_key=api_key)
 
-    # Process each pattern
     changes_made = 0
     for pattern_path in patterns:
         try:
             if refine_pattern(client, pattern_path, dry_run):
                 changes_made += 1
         except Exception as e:
-            print(f"  ❌ Unexpected error processing {pattern_path.name}: {e}")
+            print(f"  ❌ Error: {e}")
 
-    # Summary
     print(f"\n{'='*60}")
-    print(f"SUMMARY")
-    print(f"{'='*60}")
-    print(f"  Patterns checked: {len(patterns)}")
-    print(f"  Changes made: {changes_made}")
-    print(f"  Mode: {'DRY RUN' if dry_run else 'LIVE'}")
+    print(f"SUMMARY: {len(patterns)} checked, {changes_made} updated, {'DRY RUN' if dry_run else 'LIVE'}")
 
     if changes_made > 0 and not dry_run:
-        print("\n  📝 Changes written to files. GitHub Actions will create a PR.")
+        print("📝 Changes written. GitHub Actions will create PR.")
     elif changes_made == 0:
-        print("\n  ✅ All patterns are current. No PR needed.")
+        print("✅ All patterns current.")
 
 
 if __name__ == "__main__":
