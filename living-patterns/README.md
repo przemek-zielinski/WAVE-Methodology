@@ -47,7 +47,7 @@ Three PULSE rounds cover ~97% of available knowledge. Diminishing returns: Round
 
 ### Full documentation
 
-→ [Ecosystem — complete description of the ecosystem, philosophy, lifecycle, auto-refinement, open source model](Ecosystem_v3.md)
+→ [Ecosystem — complete description of the ecosystem, philosophy, lifecycle, auto-refinement, open source model](Living_Patterns_Ecosystem_v3.md)
 
 ### Available patterns
 

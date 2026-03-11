@@ -90,11 +90,11 @@ Cztery rundy dałyby ~99%, ale czwarta dodaje tylko ~3% wartości — pojedyncze
 
 **Dobre przykłady:**
 
-Dla UX/UI: „Maksymalizacja efektu WOW na użytkowniku, retencji D30 powyżej 20%, i aktywacji (pierwsza przesłana próba) powyżej 40% w ciągu 24h od rejestracji."
+Dla UX/UI: „Maksymalizacja zaufania pacjenta od pierwszego kontaktu, retencji D30 powyżej 25%, i aktywacji (pierwsza zarezerwowana konsultacja) powyżej 35% w ciągu 48h od rejestracji."
 
-Dla bazy danych: „Integralność transakcji trójstronnych (mentor-user-marka) + wydajność przy 100k jednoczesnych użytkowników + struktura pod przechwytywanie par próba→feedback→korekta→postęp jako dataset do trenowania modeli AI."
+Dla bazy danych: „Integralność dokumentacji medycznej + wydajność przy 5000 jednoczesnych sesji wideo + struktura pod analizę wzorców diagnostycznych jako dataset do trenowania modeli AI wspomagających triaz."
 
-Dla bezpieczeństwa: „Ochrona danych osobowych (RODO) + zabezpieczenie treści UGC przed nadużyciem + odporność na ataki typowe dla platform z transakcjami finansowymi i treściami wideo."
+Dla bezpieczeństwa: „Ochrona danych medycznych (RODO + krajowe przepisy o dokumentacji medycznej) + szyfrowanie end-to-end konsultacji wideo + odporność na ataki typowe dla platform z danymi zdrowotnymi i transakcjami finansowymi."
 
 Dla DevOps: „Zero-downtime deployment + automatyzacja testów + monitoring z alertami + koszt infrastruktury poniżej X€/miesiąc przy Y użytkownikach."
 
@@ -112,13 +112,13 @@ Dla DevOps: „Zero-downtime deployment + automatyzacja testów + monitoring z a
 
 **Co wpisać:** Lista plików SPECYFICZNYCH dla tego obszaru. Nie wszystkie pliki projektu — tylko te które dają AI kontekst do celowanego researchu.
 
-**Przykład dla bazy danych:** Specyfikacja TACIT (model danych), specyfikacja IdUShare (transakcje), Decision Log (podjęte decyzje o architekturze), specyfikacja HIVE (wzorce zbierania danych behawioralnych).
+**Przykład dla bazy danych:** Specyfikacja modelu danych pacjentów (Patient_Data_Model.md), specyfikacja integracji HL7 FHIR (FHIR_Integration_Spec.md), Decision Log (podjęte decyzje o architekturze), specyfikacja modułu triażu AI (Triage_AI_Spec.md).
 
-**Przykład dla bezpieczeństwa:** Specyfikacja ogólna (co chronimy), specyfikacja modułu płatności, specyfikacja moderacji, polityka prywatności (jeśli istnieje).
+**Przykład dla bezpieczeństwa:** Specyfikacja ogólna (co chronimy), analiza regulacyjna MDR (Regulatory_Analysis_MDR.md), specyfikacja szyfrowania konsultacji, polityka prywatności (jeśli istnieje).
 
 ### Parametr [OGRANICZENIA]
 
-**Co wpisać:** Twarde fakty ograniczające pole rozwiązań. Szczególnie: wybrane technologie (np. Supabase = PostgreSQL, więc nie szukaj rozwiązań dla MongoDB), regulacje (RODO, EAA), zespół (jeśli jeden programista — nie rekomenduj rozwiązań wymagających zespołu DevOps).
+**Co wpisać:** Twarde fakty ograniczające pole rozwiązań. Szczególnie: wybrane technologie (np. PostgreSQL na AWS = nie szukaj rozwiązań dla MongoDB na Azure), regulacje (RODO, MDR, NIS2), zespół (jeśli mały zespół — nie rekomenduj rozwiązań wymagających osobnego zespołu DevOps).
 
 ---
 
@@ -148,7 +148,7 @@ Napisz polecenie uruchamiające Rundę 2. Może być tak proste jak:
 
 Lub z kierunkiem:
 
-> „Uruchom Rundę 2. Szczególnie chcę sprawdzić czy nasza decyzja o PostgreSQL wytrzyma skalę 100k użytkowników i czy są pułapki przy przechowywaniu danych wideo."
+> „Uruchom Rundę 2. Szczególnie chcę sprawdzić czy PostgreSQL wytrzyma skalę 5000 jednoczesnych sesji wideo i czy są pułapki przy przechowywaniu dokumentacji medycznej z obrazami diagnostycznymi."
 
 AI zmienia kąt ataku, robi nowy research, dodaje znaleziska do dokumentu.
 
@@ -162,7 +162,7 @@ Napisz polecenie:
 
 Lub z kierunkiem:
 
-> „Runda 3. Interesują mnie szczególnie aspekty RODO przy przechowywaniu wideo, strategia backup/recovery i co się zmieni w PostgreSQL w ciągu 2 lat."
+> „Runda 3. Interesują mnie szczególnie wymogi MDR przy klasyfikacji triażu AI jako wyrobu medycznego, strategia backup/recovery dla dokumentacji medycznej i co się zmieni w regulacjach telemedycznych UE w ciągu 2 lat."
 
 AI szuka w peryferyjnych kierunkach, dodaje ostatnie elementy.
 

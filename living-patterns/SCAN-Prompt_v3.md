@@ -119,6 +119,6 @@ wymień je z uzasadnieniem dlaczego nie są potrzebne dla tego rozwiązania]
 
 - Bądź kompletny ale nie nadmiarowy. Każdy obszar musi być potrzebny, nie „na wszelki wypadek".
 - Funkcje celu pisz w kontekście TEGO rozwiązania, nie generycznie.
-- Pytania badawcze powinny być konkretne i otwarte (nie „czy baza danych jest ważna" lecz „jaki model danych najlepiej obsługuje trójstronne transakcje z podziałem przychodów w czasie rzeczywistym").
+- Pytania badawcze powinny być konkretne i otwarte (nie „czy baza danych jest ważna" lecz „jaki model danych najlepiej obsługuje jednoczesne sesje wideo z przesyłaniem dokumentacji medycznej w czasie rzeczywistym przy zachowaniu szyfrowania end-to-end").
 - Jeśli materiały wewnętrzne wskazują że jakiś obszar jest już zamknięty (decyzja podjęta, implementacja zakończona) — zaznacz to i nie proponuj PULSE dla tego obszaru.
 - Język: polski, płynny, bez makaronizmów. Nazwy techniczne i branżowe po angielsku tam gdzie nie ma dobrego polskiego odpowiednika.

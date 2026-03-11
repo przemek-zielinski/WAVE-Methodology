@@ -27,7 +27,7 @@ Pracujesz w trybie **trzech rund**. Ten prompt uruchamia Rundę 1 (Budowa). Rund
 
 ### [FUNKCJA CELU]
 
-> [WSTAW TUTAJ: Jedno zdanie definiujące co optymalizujemy. To jest kompas całego procesu — każda znaleziona wiedza będzie oceniana pytaniem „czy to przybliża do funkcji celu?" Przykład: „Efekt WOW na użytkowniku przy pierwszym i kolejnym kontakcie, maksymalizacja retencji i aktywacji." Inny przykład: „Integralność danych + wydajność zapytań przy rosnącej bazie + struktura pod unikalny dataset do trenowania modeli AI."]
+> [WSTAW TUTAJ: Jedno zdanie definiujące co optymalizujemy. To jest kompas całego procesu — każda znaleziona wiedza będzie oceniana pytaniem „czy to przybliża do funkcji celu?" Przykład: „Maksymalizacja zaufania pacjenta od pierwszego kontaktu, retencji D30 powyżej 25%, i aktywacji (pierwsza konsultacja) powyżej 35% w ciągu 48h od rejestracji." Inny przykład: „Integralność dokumentacji medycznej + wydajność przy 5000 jednoczesnych sesji + struktura pod analizę wzorców diagnostycznych jako dataset do AI."]
 
 ### [KONTEKST ROZWIĄZANIA]
 

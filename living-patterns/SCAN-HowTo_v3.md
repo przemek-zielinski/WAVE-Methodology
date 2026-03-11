@@ -76,10 +76,10 @@ Czas: około 1–2 godziny (przygotowanie danych + sesja z AI + przegląd wyniku
 **Co wpisać:** Naturę produktu, jego główną wartość, model działania, kluczowe mechaniki. Wyobraź sobie że tłumaczysz swój produkt inteligentnemu inżynierowi który go nigdy nie widział.
 
 **Dobry przykład:**
-> Budujemy trójstronny marketplace łączący mentorów (ekspertów w dyscyplinach pasji), użytkowników (ludzi chcących się rozwijać) i marki (sponsorzy wyzwań). Platforma działa przez wyzwania — mentor wystawia wyzwanie, użytkownik przesyła próbę (wideo, zdjęcie, tekst), mentor daje feedback. Mechanika obejmuje gamifikację opartą na próbach (nie na logowaniu), adaptacyjny interfejs (Living Interface — 5 warstw personalizacji behawioralnej), trójwarstwową inteligencję (HIVE — coaching zbiorowy, AGAPE — inteligencja relacyjna, TACIT — przechwytywanie wiedzy ukrytej) oraz innowacyjny model podziału przychodów (IdUShare). Platforma działa na filozofii Wise Internet — używa mechanik BigTech, ale w służbie rozwoju, nie uzależnienia.
+> Budujemy platformę telemedyczną łączącą lekarzy specjalistów, pacjentów i ubezpieczycieli. Lekarze prowadzą konsultacje wideo, wystawiają e-recepty i monitorują pacjentów zdalnie przez wearables. Pacjenci rezerwują wizyty, przesyłają wyniki badań (zdjęcia, PDF, dane z urządzeń IoT) i otrzymują spersonalizowane plany leczenia. Ubezpieczyciele rozliczają wizyty automatycznie i monitorują jakość świadczeń. Platforma obejmuje system triażu AI (wstępna ocena objawów przed konsultacją), adaptacyjny dashboard lekarza (priorytetyzacja pacjentów na podstawie pilności), szyfrowaną komunikację end-to-end i integrację z systemami szpitalnymi (HL7 FHIR). Model przychodowy: subskrypcja dla lekarzy + prowizja od konsultacji + opłata licencyjna od ubezpieczycieli.
 
 **Zły przykład:**
-> Robimy apkę edukacyjną.
+> Robimy apkę medyczną.
 
 Im więcej kontekstu — tym celniejsza analiza SCAN.
 
@@ -88,14 +88,14 @@ Im więcej kontekstu — tym celniejsza analiza SCAN.
 **Co wpisać:** Grupy użytkowników z ich charakterystykami. Jeśli masz wiele grup — opisz każdą krótko.
 
 **Dobry przykład:**
-> Trzy grupy: (1) Użytkownicy — 13–45 lat, pasjonaci (skateboarding, MTB, fotografia, gitara i inne), korzystają głównie z telefonu, średnio-zaawansowani technicznie, oczekują natychmiastowej gratyfikacji. (2) Mentorzy — 20–60 lat, eksperci w swoich dyscyplinach, nano i micro influencerzy (100–5000 obserwujących), szukają monetyzacji wiedzy, korzystają z telefonu i laptopa. (3) Marki — zespoły marketingowe firm sportowych, edukacyjnych, lifestyle, szukają autentycznego zaangażowania społeczności.
+> Trzy grupy: (1) Pacjenci — 25–75 lat, różny poziom zaawansowania technicznego (od cyfrowych natywnych po seniorów z podstawową obsługą smartfona), korzystają głównie z telefonu, oczekują prostoty i szybkiego dostępu do lekarza. (2) Lekarze specjaliści — 30–65 lat, wysokie wymagania co do niezawodności i bezpieczeństwa danych, korzystają z laptopa i tabletu podczas konsultacji, potrzebują integracji z systemami szpitalnymi. (3) Ubezpieczyciele — zespoły IT i operacyjne firm ubezpieczeniowych, potrzebują API do automatycznego rozliczania i raportowania jakości świadczeń.
 
 ### Parametr 3: Ograniczenia projektowe
 
 **Co wpisać:** Twarde fakty o zasobach i warunkach brzegowych.
 
 **Dobry przykład:**
-> Zespół: CEO (strategia, produkt), COO (operacje), AI jako główny partner technologiczny (Claude w Cursor, metodyka WAVE). Budżet na implementację: wewnętrzny (czas zespołu + koszty narzędzi). Czas: MVP w Q2 2026. Regulacje: RODO (Polska/UE), European Accessibility Act (WCAG 2.1 AA). Technologie wybrane: Next.js, TypeScript, Tailwind CSS, Supabase (PostgreSQL). Istniejąca baza: 1200+ użytkowników z IDareU V1 wymagających migracji.
+> Zespół: CTO (architektura), 3 deweloperów fullstack, 1 UX designer, 1 specjalista ds. regulacji medycznych. Budżet: €200k na MVP + €50k/rok utrzymanie. Czas: MVP w Q3 2026, pełna wersja Q1 2027. Regulacje: RODO, ustawa o wyrobach medycznych (MDR), dyrektywa NIS2 (cyberbezpieczeństwo), wymóg certyfikacji jako wyrób medyczny klasy I (jeśli triaz AI). Technologie wybrane: React Native (mobile cross-platform), Node.js (backend), PostgreSQL (baza), AWS (hosting z certyfikacją HIPAA/ISO 27001). Istniejąca infrastruktura: integracja z 3 systemami szpitalnymi przez HL7 FHIR.
 
 **Jeśli nie wiesz:** Napisz „do ustalenia" przy konkretnym parametrze. SCAN uwzględni to jako otwarte pytanie.
 
@@ -104,7 +104,7 @@ Im więcej kontekstu — tym celniejsza analiza SCAN.
 **Co wpisać:** Lista plików które dołączasz do czatu lub które są dostępne w projekcie Claude (FILES).
 
 **Dobry przykład:**
-> Dołączam / W FILES dostępne: specyfikacja ogólna (01_IDareU_Ogolnie_v3_revised.md), Decision Log (IDareU_Decision_Log.md), specyfikacja Living Interface (13_IDareU_Living_Interface_v3_revised.md), specyfikacja HIVE (10_IDareU_HIVE_v3_revised.md), fundament UX/UI (IDareU_Gen2_UX_UI_Fundament_Projektowy_v3.md), plus 18 innych modułów kolekcji idareu.core.
+> Dołączam / W FILES dostępne: specyfikacja ogólna platformy (MedConnect_Overview_v2.md), Decision Log (MedConnect_Decision_Log.md), specyfikacja modułu triażu AI (Triage_AI_Spec_v1.md), specyfikacja integracji HL7 FHIR (FHIR_Integration_Spec.md), analiza regulacyjna MDR (Regulatory_Analysis_MDR.md), prototyp UX dashboardu lekarza (Doctor_Dashboard_Prototype_v1.html).
 
 **Jeśli nie masz:** Napisz „brak materiałów wewnętrznych, projekt startuje od zera." SCAN zadziała — analiza będzie bardziej generyczna, ale nadal wartościowa.
 
@@ -132,7 +132,7 @@ Ukończenie wszystkich PULSE — po zbudowaniu wszystkich Living Patterns warto 
 
 SCAN nie buduje wiedzy. Nie przeprowadza researchu branżowego ani naukowego. Nie odpowiada na pytania implementacyjne. SCAN IDENTYFIKUJE pytania — odpowiedzi buduje PULSE.
 
-SCAN nie zastępuje doświadczenia. Jeśli masz wiedzę domenową której AI nie ma (np. specyfika polskiego rynku mentorów MTB) — Ty musisz dodać to do wyniku SCAN.
+SCAN nie zastępuje doświadczenia. Jeśli masz wiedzę domenową której AI nie ma (np. specyfika lokalnych regulacji telemedycznych w Twoim kraju) — Ty musisz dodać to do wyniku SCAN.
 
 ---
 

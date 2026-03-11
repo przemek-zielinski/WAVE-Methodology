@@ -24,7 +24,7 @@
 9. Auto-doskonalenie — mechanizm cyklicznej aktualizacji
 10. Model open source — oficjalne i społecznościowe wzorce
 11. Relacja z metodyką WAVE
-12. Przykład zastosowania — IDareU Gen2
+12. Przykład zastosowania — Platforma telemedyczna MedConnect
 13. Słownik pojęć
 
 ---
@@ -171,7 +171,7 @@ Dokument zawierający:
 
 **Dla każdego obszaru:**
 
-Funkcja celu — jedno zdanie definiujące co optymalizujemy. Przykład dla bazy danych: „Integralność danych + wydajność zapytań przy rosnącej bazie + struktura pod unikalny dataset TACIT." Przykład dla bezpieczeństwa: „Ochrona danych użytkowników i mentorów + zgodność z RODO + odporność na ataki typowe dla platform z UGC."
+Funkcja celu — jedno zdanie definiujące co optymalizujemy. Przykład dla bazy danych: „Integralność dokumentacji medycznej + wydajność przy 5000 jednoczesnych sesji wideo + struktura pod analizę wzorców diagnostycznych." Przykład dla bezpieczeństwa: „Ochrona danych zdrowotnych pacjentów i lekarzy + zgodność z RODO i MDR + odporność na ataki typowe dla platform z danymi medycznymi."
 
 Priorytet — krytyczny (blokuje resztę), ważny (wpływa na jakość), pożądany (podnosi standard).
 
@@ -505,7 +505,7 @@ Trzy poziomy wzmocnienia:
 
 **Efekt sieciowy.** Im więcej użytkowników tworzy Living Patterns i udostępnia je społeczności, tym bogatsza baza wiedzy. Każdy nowy wzorzec zwiększa wartość ekosystemu dla wszystkich.
 
-**Samonapędzający się cykl.** Lepsza baza wzorców → więcej użytkowników → więcej wkładów społecznościowych → jeszcze lepsza baza. To jest ten sam mechanizm efektów sieciowych który IDareU ma na poziomie platformy — tyle że tu dotyczy wiedzy implementacyjnej.
+**Samonapędzający się cykl.** Lepsza baza wzorców → więcej użytkowników → więcej wkładów społecznościowych → jeszcze lepsza baza. To jest klasyczny mechanizm efektów sieciowych — tyle że tu dotyczy wiedzy implementacyjnej.
 
 ---
 
@@ -545,34 +545,34 @@ WAVE mówi: „Buduj kompletnie, aktywuj progresywnie." Living Patterns realizuj
 
 ---
 
-## 12. Przykład zastosowania — IDareU Gen2
+## 12. Przykład zastosowania — Platforma telemedyczna MedConnect
 
 ### Kontekst
 
-IDareU Gen2 to trójstronny marketplace łączący mentorów, użytkowników i marki, z mechanizmem wyzwań, feedbacku wideo, gamifikacji i innowacyjnym modelem podziału przychodów (IdUShare). Techstack: Next.js, TypeScript, Tailwind, Supabase. Zespół korzysta z metodyki WAVE i narzędzia Cursor z Claude.
+MedConnect to platforma telemedyczna łącząca lekarzy specjalistów, pacjentów i ubezpieczycieli. Lekarze prowadzą konsultacje wideo, wystawiają e-recepty i monitorują pacjentów zdalnie. Pacjenci rezerwują wizyty, przesyłają wyniki badań i otrzymują spersonalizowane plany leczenia. Ubezpieczyciele rozliczają wizyty automatycznie. Techstack: React Native, Node.js, PostgreSQL, AWS. Zespół korzysta z metodyki WAVE.
 
 ### SCAN — wynik (przykładowy fragment)
 
-SCAN zidentyfikował następujące obszary dla IDareU Gen2:
+SCAN zidentyfikował następujące obszary dla MedConnect:
 
 | Obszar | Priorytet | Funkcja celu |
 |---|---|---|
-| UX/UI i User Journey | Krytyczny | Efekt WOW na użytkowniku, maksymalizacja retencji |
-| Baza danych i model danych | Krytyczny | Struktura pod TACIT dataset + wydajność + skalowalność |
-| Architektura API | Krytyczny | Spójność trójstronnego marketplace + real-time feedback |
-| Bezpieczeństwo | Krytyczny | RODO + ochrona danych UGC + zabezpieczenie transakcji |
-| Frontend techstack | Ważny | Szybkość implementacji WAVE + Living Interface compatibility |
-| Backend techstack | Ważny | Wydajność + skalowalność + koszt utrzymania |
-| DevOps / CI-CD | Ważny | Szybkość deploymentu + stabilność + monitoring |
-| Strategia testowania | Ważny | Pokrycie krytycznych ścieżek + automatyzacja |
+| UX/UI i User Journey | Krytyczny | Zaufanie pacjenta od pierwszego kontaktu, retencja D30 > 25% |
+| Baza danych i model danych | Krytyczny | Integralność dokumentacji medycznej + wydajność sesji wideo + struktura pod AI diagnostyczny |
+| Architektura API | Krytyczny | Integracja HL7 FHIR + real-time wideo + szyfrowanie end-to-end |
+| Bezpieczeństwo i regulacje | Krytyczny | RODO + MDR + NIS2 + certyfikacja wyrobów medycznych |
+| Frontend techstack | Ważny | Cross-platform mobile + responsywny dashboard lekarza |
+| Backend techstack | Ważny | Wydajność sesji wideo + skalowalność + koszt AWS |
+| DevOps / CI-CD | Ważny | Zero-downtime deployment + monitoring 24/7 |
+| Strategia testowania | Ważny | Pokrycie ścieżek krytycznych (triaz, recepta, konsultacja) |
 | SEO / ASO | Pożądany | Widoczność organiczna + optymalizacja app store |
-| Analityka i metryki | Pożądany | Mierzenie Living Patterns KPIs + panel admina |
+| Analityka i metryki | Pożądany | Jakość świadczeń + raportowanie dla ubezpieczycieli |
 
-### PULSE — wynik (zrealizowany)
+### PULSE — wynik (przykładowy)
 
-Pierwszy Living Pattern zrealizowany w praktyce: **LP_UX_UI_v3** — Fundament Projektowy UX/UI IDareU Gen2. Trzy rundy (8–9 marca 2026), osiemnaście zasad projektowych, dwadzieścia pięć pozycji w matrycy błędów, kompletne metryki, integracja z Living Interface i Wise Internet.
+Pierwszy Living Pattern: **LP_UX_UI_v3** — Fundament Projektowy UX/UI. Trzy rundy (marzec 2026), osiemnaście zasad projektowych, dwadzieścia pięć pozycji w matrycy błędów, kompletne metryki.
 
-Ten Living Pattern posłuży jako wzorzec struktury i jakości dla wszystkich kolejnych Living Patterns w projekcie IDareU Gen2.
+Ten Living Pattern posłuży jako wzorzec struktury i jakości dla wszystkich kolejnych Living Patterns w projekcie.
 
 ---
 
