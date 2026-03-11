@@ -1,0 +1,125 @@
+name: Living Patterns Pipeline
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+  contents: write
+  pull-requests: write
+
+jobs:
+
+  # ─── ETAP 1: SCAN ─────────────────────────────────────────
+  run-scan:
+    if: >
+      github.event.label.name == 'approved' ||
+      github.event.label.name == 'redo-scan'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install anthropic requests
+      - name: Run SCAN
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python living-patterns/scripts/run_scan.py 2>&1 || true
+          echo "--- SCAN step complete ---"
+
+  # ─── ETAP 2: PULSE ROUND 1 ────────────────────────────────
+  run-pulse-r1:
+    if: >
+      github.event.label.name == 'scan-approved' ||
+      github.event.label.name == 'redo-r1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install anthropic requests
+      - name: Run PULSE Round 1
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python living-patterns/scripts/run_pulse.py --round 1 --issue ${{ github.event.issue.number }} 2>&1 || true
+          echo "--- PULSE R1 step complete ---"
+
+  # ─── ETAP 3: PULSE ROUND 2 ────────────────────────────────
+  run-pulse-r2:
+    if: >
+      github.event.label.name == 'r1-approved' ||
+      github.event.label.name == 'redo-r2'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install anthropic requests
+      - name: Run PULSE Round 2
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python living-patterns/scripts/run_pulse.py --round 2 --issue ${{ github.event.issue.number }} 2>&1 || true
+          echo "--- PULSE R2 step complete ---"
+
+  # ─── ETAP 4: PULSE ROUND 3 ────────────────────────────────
+  run-pulse-r3:
+    if: >
+      github.event.label.name == 'r2-approved' ||
+      github.event.label.name == 'redo-r3'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install anthropic requests
+      - name: Run PULSE Round 3
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python living-patterns/scripts/run_pulse.py --round 3 --issue ${{ github.event.issue.number }} 2>&1 || true
+          echo "--- PULSE R3 step complete ---"
+
+  # ─── ETAP 5: PUBLISH ──────────────────────────────────────
+  publish:
+    if: github.event.label.name == 'publish'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install anthropic requests
+      - name: Publish Living Pattern
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python living-patterns/scripts/publish_lp.py 2>&1 || true
+          echo "--- Publish step complete ---"
