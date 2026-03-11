@@ -1,17 +1,15 @@
 """
 WAVE Living Patterns — Proposal Generator v3 (S1 + S2)
-Bilingual EN/PL, token-optimized (two API calls instead of one).
-
-Call 1: S1+S2 analysis in English (clean logic, smaller prompt)
-Call 2: Translation of key fields to Polish (cheap, fast, no JSON risk)
-
-Output: JSON { status, title, body } printed to stdout → GitHub Issue.
+Bilingual EN/PL, token-optimized (two API calls).
+Fixed: removed web search (caused empty responses on low-tier API plans).
+Model knowledge is sufficient for domain selection.
 """
 
 import os
 import sys
 import json
 import glob
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -22,21 +20,22 @@ MODEL = "claude-sonnet-4-20250514"
 PATTERNS_DIR = "living-patterns/patterns/official"
 
 
+def log(msg):
+    print(msg, file=sys.stderr)
+
+
 def get_existing_domains() -> list[str]:
-    """Read existing LP files to avoid proposing duplicate domains."""
     domains = []
-    pattern = os.path.join(PATTERNS_DIR, "LP_*_EN.md")
-    # Also check old naming convention without _EN
-    pattern_old = os.path.join(PATTERNS_DIR, "LP_*.md")
-    for filepath in glob.glob(pattern) + glob.glob(pattern_old):
-        name = Path(filepath).stem
-        domain = name.replace("LP_", "").rsplit("_v", 1)[0].replace("_EN", "").replace("_PL", "")
-        domains.append(domain)
+    for pattern in [os.path.join(PATTERNS_DIR, "LP_*_EN.md"),
+                    os.path.join(PATTERNS_DIR, "LP_*.md")]:
+        for filepath in glob.glob(pattern):
+            name = Path(filepath).stem
+            domain = name.replace("LP_", "").rsplit("_v", 1)[0].replace("_EN", "").replace("_PL", "")
+            domains.append(domain)
     return list(set(domains))
 
 
 def get_past_proposals() -> list[str]:
-    """Read proposal log to avoid repeating recent proposals."""
     log_path = Path("living-patterns/scripts/.proposal_history")
     if log_path.exists():
         return [line.strip() for line in log_path.read_text().splitlines() if line.strip()]
@@ -44,7 +43,6 @@ def get_past_proposals() -> list[str]:
 
 
 def save_proposal_to_history(domain: str):
-    """Append domain to history file."""
     log_path = Path("living-patterns/scripts/.proposal_history")
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with open(log_path, "a") as f:
@@ -67,9 +65,9 @@ Evaluate domains using THREE weighted criteria:
 
 CONSTRAINTS:
 - Do NOT propose these domains (already covered or recently proposed): {excluded}
-- Search the web for CURRENT data (2025-2026) on AI adoption
 - Pick SPECIFIC domains (not "business" but "supply chain logistics")
 - Domain must help PRACTITIONERS (doctors, lawyers, engineers, teachers)
+- Use your knowledge of current AI adoption trends (2024-2026)
 
 ## STEP 2 (S2) — Identify problem and solution
 
@@ -83,7 +81,7 @@ For selected domain:
 
 CRITICAL: Solution must be credible. Would a senior practitioner take this seriously?
 
-## OUTPUT — JSON only, no markdown, no backticks:
+## OUTPUT — Respond with ONLY a JSON object. No markdown, no backticks, no explanation before or after:
 
 {{
   "domain": "name",
@@ -107,74 +105,96 @@ CRITICAL: Solution must be credible. Would a senior practitioner take this serio
 Today: {today}
 """
 
-PROMPT_TRANSLATE = """Translate these fields to Polish. Natural, professional Polish — not word-for-word translation. No markdown, no backticks, JSON only:
+PROMPT_TRANSLATE = """Translate these 4 fields to Polish. Natural, professional Polish.
+Respond with ONLY a JSON object. No markdown, no backticks, no explanation:
 
 {{
-  "lp_title_pl": "translate: {lp_title}",
-  "objective_function_pl": "translate: {objective_function}",
-  "selected_problem_pl": "translate: {selected_problem}",
-  "selected_solution_pl": "translate: {selected_solution}"
+  "lp_title_pl": "translate this: {lp_title}",
+  "objective_function_pl": "translate this: {objective_function}",
+  "selected_problem_pl": "translate this: {selected_problem}",
+  "selected_solution_pl": "translate this: {selected_solution}"
 }}
 """
 
 
-def call_api(client: anthropic.Anthropic, prompt: str, max_tokens: int, use_search: bool = False) -> str:
-    """Single API call with optional web search. Returns text response."""
-    kwargs = {
-        "model": MODEL,
-        "max_tokens": max_tokens,
-        "messages": [{"role": "user", "content": prompt}]
-    }
-    if use_search:
-        kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search"}]
+def call_api(client: anthropic.Anthropic, prompt: str, max_tokens: int) -> str:
+    """Single API call, no tools. Returns text response."""
+    log(f"  Calling API (max_tokens={max_tokens})...")
 
-    response = client.messages.create(**kwargs)
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=max_tokens,
+        messages=[{"role": "user", "content": prompt}]
+    )
 
-    text = ""
+    log(f"  Response: stop_reason={response.stop_reason}, blocks={len(response.content)}")
+
+    texts = []
     for block in response.content:
         if block.type == "text":
-            text += block.text
-    return text.strip()
+            texts.append(block.text)
+
+    result = "\n".join(texts).strip()
+    log(f"  Extracted {len(result)} chars of text")
+
+    if not result:
+        log(f"  WARNING: Empty response. Block types: {[b.type for b in response.content]}")
+
+    return result
 
 
 def parse_json(text: str) -> dict:
-    """Parse JSON from API response, handling common formatting issues."""
+    """Parse JSON from API response."""
+    if not text:
+        raise json.JSONDecodeError("Empty response from API", "", 0)
     clean = text.strip()
     if clean.startswith("```"):
-        clean = clean.split("\n", 1)[1].rsplit("```", 1)[0]
+        clean = clean.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+    if not clean.startswith("{"):
+        start = clean.find("{")
+        if start >= 0:
+            depth = 0
+            for i, c in enumerate(clean[start:], start):
+                if c == "{": depth += 1
+                elif c == "}":
+                    depth -= 1
+                    if depth == 0:
+                        clean = clean[start:i+1]
+                        break
     return json.loads(clean)
 
 
 def generate_proposal(client: anthropic.Anthropic, excluded: list[str]) -> dict:
-    """Two-call strategy: S1+S2 in English, then translate key fields."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     excluded_str = ", ".join(excluded) if excluded else "none yet"
 
-    # Call 1: S1+S2 analysis (with web search, higher token budget)
+    # Call 1: S1+S2 analysis
+    log("CALL 1: S1+S2 analysis...")
     prompt = PROMPT_S1_S2.format(excluded=excluded_str, today=today)
-    text = call_api(client, prompt, max_tokens=3000, use_search=True)
+    text = call_api(client, prompt, max_tokens=3000)
     data = parse_json(text)
-    
-    import time
+    log(f"  Domain: {data.get('domain', '?')}")
+
+    # Rate limit pause
+    log("  Waiting 65s for rate limit...")
     time.sleep(65)
 
-    # Call 2: Translate key fields (no web search, minimal tokens)
+    # Call 2: Translate
+    log("CALL 2: Translation...")
     translate_prompt = PROMPT_TRANSLATE.format(
         lp_title=data.get("lp_title", ""),
         objective_function=data.get("objective_function", ""),
         selected_problem=data.get("selected_problem", ""),
         selected_solution=data.get("selected_solution", "")
     )
-    pl_text = call_api(client, translate_prompt, max_tokens=500, use_search=False)
+    pl_text = call_api(client, translate_prompt, max_tokens=500)
     pl_data = parse_json(pl_text)
 
-    # Merge
     data.update(pl_data)
     return data
 
 
 def format_issue(data: dict) -> dict:
-    """Format proposal into bilingual GitHub Issue."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     title_en = data.get("lp_title", "Unknown")
@@ -295,6 +315,8 @@ def main():
     manual_exclude = [d.strip() for d in os.environ.get("EXCLUDE_DOMAINS", "").split(",") if d.strip()]
     excluded = list(set(existing + past + manual_exclude))
 
+    log(f"Excluded domains: {excluded}")
+
     client = anthropic.Anthropic(api_key=api_key)
 
     try:
@@ -303,12 +325,15 @@ def main():
         save_proposal_to_history(data.get("domain", "unknown"))
         print(json.dumps(result, ensure_ascii=False))
     except json.JSONDecodeError as e:
+        log(f"FATAL: JSON parse error: {e}")
         print(json.dumps({"status": "error", "message": f"JSON parse error: {e}"}))
         sys.exit(1)
     except anthropic.APIError as e:
+        log(f"FATAL: API error: {e}")
         print(json.dumps({"status": "error", "message": f"API error: {e}"}))
         sys.exit(1)
     except Exception as e:
+        log(f"FATAL: {type(e).__name__}: {e}")
         print(json.dumps({"status": "error", "message": f"Error: {e}"}))
         sys.exit(1)
 

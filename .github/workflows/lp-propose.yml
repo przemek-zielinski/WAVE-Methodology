@@ -2,12 +2,11 @@ name: Living Patterns Proposal Generator
 
 on:
   schedule:
-    # Każdy poniedziałek o 7:00 UTC
     - cron: '0 7 * * 1'
   workflow_dispatch:
     inputs:
       exclude_domains:
-        description: 'Domains to exclude (comma-separated, e.g. "healthcare,education")'
+        description: 'Domains to exclude (comma-separated)'
         required: false
         default: ''
 
@@ -37,7 +36,10 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           EXCLUDE_DOMAINS: ${{ github.event.inputs.exclude_domains || '' }}
         run: |
-          python living-patterns/scripts/propose_lp.py > proposal.json || true
+          python living-patterns/scripts/propose_lp.py > proposal.json 2> propose.log || true
+          echo "=== SCRIPT LOG ==="
+          cat propose.log
+          echo "=== SCRIPT OUTPUT ==="
           cat proposal.json
 
       - name: Create Issue from proposal
