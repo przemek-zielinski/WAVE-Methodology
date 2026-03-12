@@ -1,8 +1,7 @@
 """
-WAVE Living Patterns — Proposal Generator v3 (S1 + S2)
-Bilingual EN/PL, token-optimized (two API calls).
-Fixed: removed web search (caused empty responses on low-tier API plans).
-Model knowledge is sufficient for domain selection.
+WAVE Living Patterns — Proposal Generator v4 (S0 + S1 + S2)
+Three-stage: Web Research → Domain Selection → Problem/Solution.
+Bilingual EN/PL, 5 decision factors, web-informed scoring.
 """
 
 import os
@@ -18,6 +17,7 @@ import anthropic
 
 MODEL = "claude-sonnet-4-20250514"
 PATTERNS_DIR = "living-patterns/patterns/official"
+RATE_LIMIT_PAUSE = 65
 
 
 def log(msg):
@@ -49,44 +49,108 @@ def save_proposal_to_history(domain: str):
         f.write(f"{domain}\n")
 
 
+# ---------------------------------------------------------------------------
+# Step 0 — Market Intelligence (with web search)
+# ---------------------------------------------------------------------------
+
+PROMPT_STEP0 = """You are a market intelligence analyst researching where AI is making the biggest real-world impact on practitioners' daily work in 2025-2026.
+
+Conduct 5 web searches, one for each axis below. Find the FRESHEST, most CONCRETE data available.
+
+## FIVE RESEARCH AXES
+
+**1. PAIN — Practitioner suffering**
+Where do practitioners suffer most? Burnout, attrition, administrative overload, repetitive drudgery. Search for 2025-2026 data on workforce crises, burnout rates, time wasted on non-core tasks. This is about PEOPLE, not technology.
+
+**2. SOLUTIONS — Working AI implementations**
+What AI tools have been DEPLOYED (not announced) with MEASURABLE results? Search for case studies, pilot results, production deployments with concrete numbers (time saved, errors reduced, costs cut). Not predictions — real outcomes.
+
+**3. ECONOMIC VALUE — Financial impact of AI**
+What is the ROI of AI implementations across domains? Search for: direct savings (cost reduction, revenue increase), indirect value (time optimization, process efficiency, risk mitigation, better resource allocation, error cost elimination). Hard numbers per domain.
+
+**4. REGULATION — Doors opening and closing**
+What new AI regulations entered force or were proposed in 2025-2026? Which domains gained regulatory clarity (green light) and which face new restrictions (red light)? Search for FDA, EU AI Act, sector-specific AI rules.
+
+**5. FAILURES — Where AI fell short**
+Where did AI deployments fail or disappoint? What lessons emerged? Search for post-mortems, critical analyses, abandoned projects, unintended consequences. This is the counterbalance — domains with hype but no substance.
+
+## OUTPUT
+
+Write a briefing of 400-600 words. For each domain you discover, include:
+- What specific practitioner pain AI addresses
+- What measurable results have been achieved (numbers, percentages, timeframes)
+- What is the economic value (direct and indirect)
+- What is the regulatory status
+- What are the known risks and failures
+
+Every claim must cite a specific source with date. No generalities.
+Cover at minimum 4 different domains. Do NOT cover these domains (already done): {excluded}
+
+Today: {today}
+"""
+
+
+# ---------------------------------------------------------------------------
+# Step 1+2 — Domain Selection + Problem/Solution (JSON, no web search)
+# ---------------------------------------------------------------------------
+
 PROMPT_S1_S2 = """You are a strategic analyst for the WAVE methodology — an open methodology for human-AI collaboration.
 
-Your task: identify a promising domain for a new Living Pattern.
+Your task: using the market intelligence below, select the best domain for a new Living Pattern.
+
+## CURRENT MARKET INTELLIGENCE (from web research today)
+{market_intelligence}
 
 ## STEP 1 (S1) — Select a domain
 
-Evaluate domains using THREE weighted criteria:
+Evaluate at least 3 candidate domains using FIVE weighted criteria:
 
-1. **AI augmentation potential (40%)** — How much can AI amplify human work? Look for: repetitive expert tasks, data-heavy decisions, documentation burden, knowledge transfer gaps.
+1. **Practitioner pain intensity (25%)** — How severely do practitioners suffer without AI? Look for: burnout rates, workforce attrition, time wasted on non-core work, measurable suffering.
 
-2. **Social acceptance of AI (30%)** — How ready is this domain? Look for: positive sentiment, regulatory openness, practitioners experimenting.
+2. **AI augmentation potential (25%)** — How effectively can AI amplify human work? Look for: proven implementations with results, not just theoretical potential.
 
-3. **Existing AI solutions (30%)** — Working AI tools already? Validates feasibility.
+3. **Economic value measurability (20%)** — Can results be measured in hard numbers? Look for: clear before/after metrics, ROI data, cost savings, time savings. Domains with measurable outcomes build stronger Living Patterns.
+
+4. **Social and regulatory readiness (15%)** — Is the domain ready for AI? Look for: practitioner acceptance, regulatory clarity (not restriction), existing experimentation.
+
+5. **Market reach (15%)** — How many practitioners would benefit? Larger impact = more valuable Living Pattern for WAVE methodology.
+
+Score each domain 1-10 on each factor. Weighted total determines selection.
 
 CONSTRAINTS:
 - Do NOT propose these domains (already covered or recently proposed): {excluded}
 - Pick SPECIFIC domains (not "business" but "supply chain logistics")
-- Domain must help PRACTITIONERS (doctors, lawyers, engineers, teachers)
-- Use your knowledge of current AI adoption trends (2024-2026)
+- Domain must help PRACTITIONERS (doctors, lawyers, engineers, teachers, managers)
+- Base your scores on the market intelligence above, not assumptions
 
 ## STEP 2 (S2) — Identify problem and solution
 
-For selected domain:
+For the selected domain:
 
-1. Identify 2-3 COMMON DAILY problems practitioners face. Real, widespread, not exotic.
+1. Identify 2-3 COMMON DAILY problems practitioners face. Real, widespread, not exotic. Use evidence from the market intelligence.
 
-2. Score each on: work efficiency impact + human empowerment potential. Pick highest.
+2. Score each on: work efficiency impact (1-10) + human empowerment potential (1-10). Pick highest combined.
 
 3. Propose 2 realistic AI solutions. Pick ONE based on: feasibility (medium-to-large corporate budget), practicality (existing AI capabilities), WAVE alignment (human leads, AI amplifies).
 
 CRITICAL: Solution must be credible. Would a senior practitioner take this seriously?
 
-## OUTPUT — Respond with ONLY a JSON object. No markdown, no backticks, no explanation before or after:
+## OUTPUT — Respond with ONLY a JSON object. No markdown, no backticks, no explanation:
 
 {{
   "domain": "name",
-  "domain_score": {{"ai_potential": 8, "social_acceptance": 7, "existing_solutions": 6, "weighted_total": 7.1}},
-  "runner_up_domains": [{{"name": "x", "weighted_total": 6.5}}, {{"name": "y", "weighted_total": 6.2}}],
+  "domain_scores": {{
+    "pain_intensity": 8,
+    "ai_potential": 9,
+    "measurability": 7,
+    "readiness": 8,
+    "market_reach": 7,
+    "weighted_total": 7.9
+  }},
+  "runner_up_domains": [
+    {{"name": "x", "pain": 7, "ai_pot": 8, "measur": 6, "ready": 7, "reach": 8, "total": 7.2}},
+    {{"name": "y", "pain": 8, "ai_pot": 6, "measur": 7, "ready": 6, "reach": 7, "total": 6.8}}
+  ],
   "problems_considered": [
     {{"problem": "desc", "efficiency_score": 8, "empowerment_score": 7}},
     {{"problem": "desc", "efficiency_score": 6, "empowerment_score": 8}}
@@ -105,6 +169,11 @@ CRITICAL: Solution must be credible. Would a senior practitioner take this serio
 Today: {today}
 """
 
+
+# ---------------------------------------------------------------------------
+# Translation prompt
+# ---------------------------------------------------------------------------
+
 PROMPT_TRANSLATE = """Translate all fields below to natural, professional Polish.
 Respond with ONLY a JSON object. No markdown, no backticks, no explanation:
 
@@ -122,6 +191,10 @@ For solutions_pl: translate each solution description string in the array.
 Keep the arrays in the same order as input.
 """
 
+
+# ---------------------------------------------------------------------------
+# API helpers
+# ---------------------------------------------------------------------------
 
 def call_api(client: anthropic.Anthropic, prompt: str, max_tokens: int) -> str:
     """Single API call, no tools. Returns text response."""
@@ -149,6 +222,37 @@ def call_api(client: anthropic.Anthropic, prompt: str, max_tokens: int) -> str:
     return result
 
 
+def call_api_with_search(client: anthropic.Anthropic, prompt: str, max_tokens: int) -> str:
+    """API call with web search enabled. Extracts text from mixed response blocks."""
+    log(f"  Calling API with web search (max_tokens={max_tokens})...")
+
+    try:
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+            tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 5}],
+        )
+
+        texts = []
+        for block in response.content:
+            if hasattr(block, "text") and block.text:
+                texts.append(block.text)
+
+        result = "\n".join(texts).strip()
+        log(f"  Web search response: {len(result)} chars, stop={response.stop_reason}")
+
+        if not result:
+            log("  WARNING: Empty text from web search. Falling back to no-search...")
+            return call_api(client, prompt, max_tokens)
+
+        return result
+
+    except Exception as e:
+        log(f"  Web search error: {e}. Falling back to no-search...")
+        return call_api(client, prompt, max_tokens)
+
+
 def parse_json(text: str) -> dict:
     """Parse JSON from API response."""
     if not text:
@@ -170,23 +274,42 @@ def parse_json(text: str) -> dict:
     return json.loads(clean)
 
 
+# ---------------------------------------------------------------------------
+# Main generation flow
+# ---------------------------------------------------------------------------
+
 def generate_proposal(client: anthropic.Anthropic, excluded: list[str]) -> dict:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     excluded_str = ", ".join(excluded) if excluded else "none yet"
 
-    # Call 1: S1+S2 analysis
-    log("CALL 1: S1+S2 analysis...")
-    prompt = PROMPT_S1_S2.format(excluded=excluded_str, today=today)
-    text = call_api(client, prompt, max_tokens=3000)
+    # Step 0: Market Intelligence (web search)
+    log("STEP 0: Market Intelligence (web search)...")
+    step0_prompt = PROMPT_STEP0.format(excluded=excluded_str, today=today)
+    market_intelligence = call_api_with_search(client, step0_prompt, max_tokens=2000)
+    log(f"  Market briefing: {len(market_intelligence)} chars")
+
+    # Rate limit pause
+    log(f"  Waiting {RATE_LIMIT_PAUSE}s for rate limit...")
+    time.sleep(RATE_LIMIT_PAUSE)
+
+    # Step 1+2: Domain selection + Problem/Solution (JSON, no web search)
+    log("STEP 1+2: S1+S2 analysis (with market intelligence)...")
+    s1s2_prompt = PROMPT_S1_S2.format(
+        market_intelligence=market_intelligence[:4000],
+        excluded=excluded_str,
+        today=today,
+    )
+    text = call_api(client, s1s2_prompt, max_tokens=3000)
     data = parse_json(text)
+    data["market_intelligence_excerpt"] = market_intelligence[:500]
     log(f"  Domain: {data.get('domain', '?')}")
 
     # Rate limit pause
-    log("  Waiting 65s for rate limit...")
-    time.sleep(65)
+    log(f"  Waiting {RATE_LIMIT_PAUSE}s for rate limit...")
+    time.sleep(RATE_LIMIT_PAUSE)
 
-    # Call 2: Translate
-    log("CALL 2: Translation...")
+    # Step 3: Translate
+    log("STEP 3: Translation...")
     problems_list = [p.get("problem", "") for p in data.get("problems_considered", [])]
     solutions_list = [s.get("solution", "") for s in data.get("solutions_considered", [])]
     translate_prompt = PROMPT_TRANSLATE.format(
@@ -220,6 +343,14 @@ def format_issue(data: dict) -> dict:
 
     title = f"📋 LP Proposal: {title_en}"
 
+    # Extract scores (handle both old and new format)
+    scores = data.get("domain_scores", data.get("domain_score", {}))
+
+    # Build runner-up domains table
+    runner_up_rows = ""
+    for d in data.get("runner_up_domains", []):
+        runner_up_rows += f"| {d.get('name', '?')} | {d.get('pain', '?')} | {d.get('ai_pot', '?')} | {d.get('measur', '?')} | {d.get('ready', '?')} | {d.get('reach', '?')} | {d.get('total', '?')} |\n"
+
     # Build problems table with PL translations
     problems_rows = ""
     for i, p in enumerate(data.get("problems_considered", [])):
@@ -243,12 +374,27 @@ def format_issue(data: dict) -> dict:
 
 ### Wybrana domena / Selected Domain: **{data['domain']}**
 
-**Wynik ważony / Weighted score:** {data['domain_score']['weighted_total']}/10
-- Potencjał AI / AI augmentation potential: {data['domain_score']['ai_potential']}/10 (waga/weight: 40%)
-- Akceptacja społeczna AI / Social acceptance of AI: {data['domain_score']['social_acceptance']}/10 (waga/weight: 30%)
-- Istniejące rozwiązania AI / Existing AI solutions: {data['domain_score']['existing_solutions']}/10 (waga/weight: 30%)
+**Wynik ważony / Weighted score:** {scores.get('weighted_total', '?')}/10
 
-**Domeny drugie w kolejności / Runner-up domains:** {', '.join(f"{d['name']} ({d['weighted_total']})" for d in data.get('runner_up_domains', []))}
+| Faktor / Factor | Waga / Weight | Wynik / Score |
+|-----------------|:------------:|:------------:|
+| Intensywność bólu praktyków / Practitioner pain intensity | 25% | {scores.get('pain_intensity', '?')}/10 |
+| Potencjał wzmocnienia AI / AI augmentation potential | 25% | {scores.get('ai_potential', '?')}/10 |
+| Mierzalność efektu / Economic value measurability | 20% | {scores.get('measurability', '?')}/10 |
+| Gotowość społeczna i regulacyjna / Social & regulatory readiness | 15% | {scores.get('readiness', '?')}/10 |
+| Zasięg rynku / Market reach | 15% | {scores.get('market_reach', '?')}/10 |
+
+**Domeny drugie w kolejności / Runner-up domains:**
+
+| Domena / Domain | Ból / Pain | AI Pot. | Mierz. / Meas. | Gotow. / Ready | Zasięg / Reach | Suma / Total |
+|-----------------|:----------:|:-------:|:--------------:|:--------------:|:--------------:|:------------:|
+{runner_up_rows}
+
+---
+
+### Wywiad rynkowy / Market Intelligence (excerpt)
+
+{data.get('market_intelligence_excerpt', 'N/A')}
 
 ---
 
@@ -318,8 +464,8 @@ def format_issue(data: dict) -> dict:
 - 👎 **Odrzuć / Reject** — Zamknij z komentarzem / Close with comment
 - 💬 **Dyskusja / Discuss** — Zaproponuj zmiany / Suggest modifications
 
-*Wygenerowano automatycznie przez WAVE Living Patterns (S1+S2). AI proponuje, człowiek decyduje.*
-*Auto-generated by WAVE Living Patterns (S1+S2). AI proposes, human decides.*
+*Wygenerowano automatycznie przez WAVE Living Patterns (S0+S1+S2). AI proponuje, człowiek decyduje.*
+*Auto-generated by WAVE Living Patterns (S0+S1+S2). AI proposes, human decides.*
 """
 
     return {"status": "ok", "title": title, "body": body}
