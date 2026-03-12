@@ -446,3 +446,23 @@ def cleanup_markdown(text):
     text = repair_markdown_tables(text)
     text = fix_orphan_dots(text)
     return text
+
+
+# ---------------------------------------------------------------------------
+# Translation prompt (shared across all pipeline stages)
+# ---------------------------------------------------------------------------
+
+TRANSLATE_PROMPT = """Translate the following document from English to Polish.
+
+RULES:
+- Natural, fluent Polish — NOT machine translation
+- Technical terms that have no good Polish equivalent stay in English (API, framework, compliance, etc.)
+- Metric names and section headers in Polish
+- Maintain all Markdown formatting exactly
+- Keep source references in original language
+- The tone should be professional but accessible — as if a Polish expert wrote it originally
+- Your output must contain ONLY the translated text — no translator notes, no comments, no instructions.
+
+DOCUMENT TO TRANSLATE:
+{document}
+"""

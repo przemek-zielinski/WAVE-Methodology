@@ -271,19 +271,7 @@ One row per line in tables. Pure Markdown, no HTML. Clean rendering on GitHub.
 That's it. Create freely, fill completely.
 """
 
-TRANSLATE_PROMPT = """Translate the following Living Pattern document from English to Polish.
-
-RULES:
-- Natural, fluent Polish — NOT machine translation
-- Technical terms that have no good Polish equivalent stay in English (API, framework, compliance, etc.)
-- Metric names and section headers in Polish
-- Maintain all Markdown formatting exactly
-- Keep source references in original language
-- The tone should be professional but accessible — as if a Polish expert wrote it originally
-
-DOCUMENT TO TRANSLATE:
-{document}
-"""
+# TRANSLATE_PROMPT is imported from lp_common
 
 # ---------------------------------------------------------------------------
 # Main
