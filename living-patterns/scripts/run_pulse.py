@@ -227,21 +227,17 @@ Write the COMPLETE Living Pattern (not a delta). Include everything from R1, cor
 [Comprehensive, current, synthesized from 3 rounds]
 
 ## PART II — PRINCIPLES AND STANDARDS
-[Final numbered list — R1 principles + R2 corrections + R3 additions]
+[Final numbered list — R1 principles + R2 corrections + R3 additions.
+Each principle: Name → Description → Rationale → Violation consequence.]
 
 ## PART III — ERROR MATRIX
-
-| Error Type | Severity | Consequence | Detection Method | Prevention Strategy |
-|------------|----------|-------------|-----------------|---------------------|
-| [name] | Critical/Serious/Moderate | [specific impact] | [how to detect] | [how to prevent] |
-[Minimum 10 rows. Every cell filled. One row per line.]
+[Table of errors. You decide the columns and structure that best fits this domain.
+Add sub-tables or additional matrices if the topic warrants it.]
 
 ## PART IV — DECISION MATRIX
-
-| Decision Point | Recommendation | Rationale | Risk Level |
-|----------------|---------------|-----------|------------|
-| [decision] | [what to do] | [why] | Critical/High/Medium/Low |
-[Minimum 6 rows. Every cell filled. One row per line.]
+[Key implementation decisions. You decide the structure — single table, multiple tables,
+sub-sections with criteria — whatever serves the reader best. Add extra tables
+(e.g. technology selection criteria, risk assessment matrices) if they add value.]
 
 ## PART V — SUCCESS METRICS
 [Leading | Lagging | Technical — validated across 3 rounds]
@@ -258,33 +254,21 @@ Write the COMPLETE Living Pattern (not a delta). Include everything from R1, cor
 ```
 
 Write comprehensively. This is the final product. Quality over brevity.
+You have full creative freedom in structure — add tables, sub-sections, frameworks,
+matrices, or any other elements that make this Living Pattern genuinely useful.
 
-## CRITICAL FORMATTING RULES
+## ONE FORMATTING RULE
 
-Follow these rules exactly. Formatting quality is as important as content quality.
+**Every element you create must be complete.**
 
-**Tables (ERROR MATRIX, DECISION MATRIX):**
-- Every cell in every row MUST contain text. NEVER leave a cell empty.
-- Use proper Markdown table syntax with header row and separator row (|---|).
-- Keep cell content concise (max 15-20 words per cell) so tables render cleanly.
-- ERROR MATRIX must have exactly 5 columns: Error Type | Severity | Consequence | Detection Method | Prevention Strategy
-- DECISION MATRIX must have all columns filled for every row.
-- Do NOT split a single table row across multiple lines — each row must be one line.
+If you create a table — every cell in every row must contain text. No empty cells.
+If you create a paragraph — no orphan dots or empty markers between paragraphs.
+If you create a list — every item must have substance.
+If you add a sub-table or extra section — fill it fully.
 
-**Paragraphs and spacing:**
-- Do NOT insert orphan dots (`.`) or empty lines with just a period between paragraphs.
-- Use standard Markdown paragraph spacing: one blank line between paragraphs, nothing else.
-- Quoted text should flow naturally into the paragraph, not be placed on isolated lines.
+One row per line in tables. Pure Markdown, no HTML. Clean rendering on GitHub.
 
-**Principles (PART II):**
-- Number each principle sequentially (1, 2, 3...).
-- Each principle follows the pattern: Name → Description (italic) → Rationale → Violation consequence.
-- Rationale text should be integrated into the paragraph, not separated by dots or blank markers.
-
-**General:**
-- No HTML tags. Pure Markdown only.
-- No trailing pipes or broken table rows.
-- The document must render cleanly in GitHub's Markdown renderer.
+That's it. Create freely, fill completely.
 """
 
 TRANSLATE_PROMPT = """Translate the following Living Pattern document from English to Polish.
