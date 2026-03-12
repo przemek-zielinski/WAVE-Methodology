@@ -105,15 +105,21 @@ CRITICAL: Solution must be credible. Would a senior practitioner take this serio
 Today: {today}
 """
 
-PROMPT_TRANSLATE = """Translate these 4 fields to Polish. Natural, professional Polish.
+PROMPT_TRANSLATE = """Translate all fields below to natural, professional Polish.
 Respond with ONLY a JSON object. No markdown, no backticks, no explanation:
 
 {{
-  "lp_title_pl": "translate this: {lp_title}",
-  "objective_function_pl": "translate this: {objective_function}",
-  "selected_problem_pl": "translate this: {selected_problem}",
-  "selected_solution_pl": "translate this: {selected_solution}"
+  "lp_title_pl": "translate: {lp_title}",
+  "objective_function_pl": "translate: {objective_function}",
+  "selected_problem_pl": "translate: {selected_problem}",
+  "selected_solution_pl": "translate: {selected_solution}",
+  "problems_pl": {problems_json},
+  "solutions_pl": {solutions_json}
 }}
+
+For problems_pl: translate each problem description string in the array.
+For solutions_pl: translate each solution description string in the array.
+Keep the arrays in the same order as input.
 """
 
 
@@ -181,13 +187,17 @@ def generate_proposal(client: anthropic.Anthropic, excluded: list[str]) -> dict:
 
     # Call 2: Translate
     log("CALL 2: Translation...")
+    problems_list = [p.get("problem", "") for p in data.get("problems_considered", [])]
+    solutions_list = [s.get("solution", "") for s in data.get("solutions_considered", [])]
     translate_prompt = PROMPT_TRANSLATE.format(
         lp_title=data.get("lp_title", ""),
         objective_function=data.get("objective_function", ""),
         selected_problem=data.get("selected_problem", ""),
-        selected_solution=data.get("selected_solution", "")
+        selected_solution=data.get("selected_solution", ""),
+        problems_json=json.dumps(problems_list, ensure_ascii=False),
+        solutions_json=json.dumps(solutions_list, ensure_ascii=False),
     )
-    pl_text = call_api(client, translate_prompt, max_tokens=500)
+    pl_text = call_api(client, translate_prompt, max_tokens=1500)
     pl_data = parse_json(pl_text)
 
     data.update(pl_data)
@@ -205,65 +215,77 @@ def format_issue(data: dict) -> dict:
     problem_pl = data.get("selected_problem_pl", problem_en)
     solution_en = data.get("selected_solution", "")
     solution_pl = data.get("selected_solution_pl", solution_en)
+    problems_pl = data.get("problems_pl", [])
+    solutions_pl = data.get("solutions_pl", [])
 
     title = f"📋 LP Proposal: {title_en}"
 
-    body = f"""## Living Pattern Proposal — Auto-Generated {today}
-
-### Selected Domain: **{data['domain']}**
-
-**Weighted score:** {data['domain_score']['weighted_total']}/10
-- AI augmentation potential: {data['domain_score']['ai_potential']}/10 (weight: 40%)
-- Social acceptance of AI: {data['domain_score']['social_acceptance']}/10 (weight: 30%)
-- Existing AI solutions: {data['domain_score']['existing_solutions']}/10 (weight: 30%)
-
-**Runner-up domains:** {', '.join(f"{d['name']} ({d['weighted_total']})" for d in data.get('runner_up_domains', []))}
-
----
-
-### Problems Considered
-
-| Problem | Efficiency | Empowerment | Selected |
-|---------|:----------:|:-----------:|:--------:|
-"""
-    for p in data.get("problems_considered", []):
+    # Build problems table with PL translations
+    problems_rows = ""
+    for i, p in enumerate(data.get("problems_considered", [])):
         sel = "✅" if p["problem"] == problem_en else ""
-        body += f"| {p['problem'][:80]}{'...' if len(p['problem']) > 80 else ''} | {p['efficiency_score']}/10 | {p['empowerment_score']}/10 | {sel} |\n"
+        p_en = p['problem'][:80] + ('...' if len(p['problem']) > 80 else '')
+        p_pl = problems_pl[i][:80] + ('...' if len(problems_pl[i]) > 80 else '') if i < len(problems_pl) else p_en
+        problems_rows += f"| {p_en} | {p_pl} | {p['efficiency_score']}/10 | {p['empowerment_score']}/10 | {sel} |\n"
 
-    body += f"""
-**Selected problem (EN):** {problem_en}
-**Wybrany problem (PL):** {problem_pl}
-
----
-
-### Solutions Considered
-
-| Solution | Feasibility | Practicality | WAVE | Selected |
-|----------|:-----------:|:------------:|:----:|:--------:|
-"""
-    for s in data.get("solutions_considered", []):
+    # Build solutions table with PL translations
+    solutions_rows = ""
+    for i, s in enumerate(data.get("solutions_considered", [])):
         sel = "✅" if s["solution"] == solution_en else ""
-        body += f"| {s['solution'][:70]}{'...' if len(s['solution']) > 70 else ''} | {s['feasibility']}/10 | {s['practicality']}/10 | {s['wave_alignment']}/10 | {sel} |\n"
+        s_en = s['solution'][:70] + ('...' if len(s['solution']) > 70 else '')
+        s_pl = solutions_pl[i][:70] + ('...' if len(solutions_pl[i]) > 70 else '') if i < len(solutions_pl) else s_en
+        solutions_rows += f"| {s_en} | {s_pl} | {s['feasibility']}/10 | {s['practicality']}/10 | {s['wave_alignment']}/10 | {sel} |\n"
 
-    body += f"""
-**Selected solution (EN):** {solution_en}
-**Wybrane rozwiązanie (PL):** {solution_pl}
+    body = f"""## Propozycja Living Pattern — Wygenerowana automatycznie {today}
+## Living Pattern Proposal — Auto-Generated {today}
 
 ---
 
-### Proposed Living Pattern
+### Wybrana domena / Selected Domain: **{data['domain']}**
+
+**Wynik ważony / Weighted score:** {data['domain_score']['weighted_total']}/10
+- Potencjał AI / AI augmentation potential: {data['domain_score']['ai_potential']}/10 (waga/weight: 40%)
+- Akceptacja społeczna AI / Social acceptance of AI: {data['domain_score']['social_acceptance']}/10 (waga/weight: 30%)
+- Istniejące rozwiązania AI / Existing AI solutions: {data['domain_score']['existing_solutions']}/10 (waga/weight: 30%)
+
+**Domeny drugie w kolejności / Runner-up domains:** {', '.join(f"{d['name']} ({d['weighted_total']})" for d in data.get('runner_up_domains', []))}
+
+---
+
+### Rozpatrywane problemy / Problems Considered
+
+| Problem (EN) | Problem (PL) | Wydajność / Efficiency | Wzmocnienie / Empowerment | Wybrano / Selected |
+|--------------|-------------|:----------------------:|:-------------------------:|:------------------:|
+{problems_rows}
+**Wybrany problem / Selected problem (EN):** {problem_en}
+**Wybrany problem / Selected problem (PL):** {problem_pl}
+
+---
+
+### Rozpatrywane rozwiązania / Solutions Considered
+
+| Rozwiązanie / Solution (EN) | Rozwiązanie / Solution (PL) | Wykonalność / Feasibility | Praktyczność / Practicality | WAVE | Wybrano / Selected |
+|-----------------------------|----------------------------|:-------------------------:|:---------------------------:|:----:|:------------------:|
+{solutions_rows}
+**Wybrane rozwiązanie / Selected solution (EN):** {solution_en}
+**Wybrane rozwiązanie / Selected solution (PL):** {solution_pl}
+
+---
+
+### Proponowany Living Pattern / Proposed Living Pattern
 
 | | English | Polski |
 |---|---------|--------|
-| **Title** | {title_en} | {title_pl} |
-| **Objective** | {obj_en} | {obj_pl} |
+| **Tytuł / Title** | {title_en} | {title_pl} |
+| **Cel / Objective** | {obj_en} | {obj_pl} |
 
-**Key sources:** {', '.join(data.get('key_sources', []))}
+**Kluczowe źródła / Key sources:** {', '.join(data.get('key_sources', []))}
 
 ---
 
-### Ready PULSE Parameters — English
+### Parametry PULSE / PULSE Parameters
 
+**English:**
 ```
 [AREA]: {data['domain']}
 [OBJECTIVE FUNCTION]: {obj_en}
@@ -272,8 +294,7 @@ def format_issue(data: dict) -> dict:
 [CONSTRAINTS]: Feasible within medium-to-large corporate project budget
 ```
 
-### Gotowe parametry PULSE — Polski
-
+**Polski:**
 ```
 [OBSZAR]: {data['domain']}
 [FUNKCJA CELU]: {obj_pl}
@@ -284,20 +305,20 @@ def format_issue(data: dict) -> dict:
 
 ---
 
-### Output files / Pliki wyjściowe
+### Pliki wyjściowe / Output files
 
-When building this LP with PULSE, generate two files:
 - `LP_{data['domain'].replace(' ', '_')}_v1_EN.md`
 - `LP_{data['domain'].replace(' ', '_')}_v1_PL.md`
 
 ---
 
-### What to do / Co zrobić
+### Co zrobić / What to do
 
-- 👍 **Approve** — Run SCAN + PULSE in both EN and PL when ready
-- 👎 **Reject** — Close with comment why
-- 💬 **Discuss** — Suggest modifications
+- 👍 **Zatwierdź / Approve** — Uruchom SCAN + PULSE / Run SCAN + PULSE
+- 👎 **Odrzuć / Reject** — Zamknij z komentarzem / Close with comment
+- 💬 **Dyskusja / Discuss** — Zaproponuj zmiany / Suggest modifications
 
+*Wygenerowano automatycznie przez WAVE Living Patterns (S1+S2). AI proponuje, człowiek decyduje.*
 *Auto-generated by WAVE Living Patterns (S1+S2). AI proposes, human decides.*
 """
 
