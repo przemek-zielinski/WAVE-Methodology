@@ -2,7 +2,7 @@ name: Living Patterns Proposal Generator
 
 on:
   schedule:
-    - cron: '0 7 * * 1'
+    - cron: '0 7 * * *'
   workflow_dispatch:
     inputs:
       exclude_domains:
