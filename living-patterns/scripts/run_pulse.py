@@ -230,10 +230,18 @@ Write the COMPLETE Living Pattern (not a delta). Include everything from R1, cor
 [Final numbered list — R1 principles + R2 corrections + R3 additions]
 
 ## PART III — ERROR MATRIX
-[Complete matrix from all 3 rounds]
+
+| Error Type | Severity | Consequence | Detection Method | Prevention Strategy |
+|------------|----------|-------------|-----------------|---------------------|
+| [name] | Critical/Serious/Moderate | [specific impact] | [how to detect] | [how to prevent] |
+[Minimum 10 rows. Every cell filled. One row per line.]
 
 ## PART IV — DECISION MATRIX
-[Key decisions with recommendations]
+
+| Decision Point | Recommendation | Rationale | Risk Level |
+|----------------|---------------|-----------|------------|
+| [decision] | [what to do] | [why] | Critical/High/Medium/Low |
+[Minimum 6 rows. Every cell filled. One row per line.]
 
 ## PART V — SUCCESS METRICS
 [Leading | Lagging | Technical — validated across 3 rounds]
@@ -250,6 +258,33 @@ Write the COMPLETE Living Pattern (not a delta). Include everything from R1, cor
 ```
 
 Write comprehensively. This is the final product. Quality over brevity.
+
+## CRITICAL FORMATTING RULES
+
+Follow these rules exactly. Formatting quality is as important as content quality.
+
+**Tables (ERROR MATRIX, DECISION MATRIX):**
+- Every cell in every row MUST contain text. NEVER leave a cell empty.
+- Use proper Markdown table syntax with header row and separator row (|---|).
+- Keep cell content concise (max 15-20 words per cell) so tables render cleanly.
+- ERROR MATRIX must have exactly 5 columns: Error Type | Severity | Consequence | Detection Method | Prevention Strategy
+- DECISION MATRIX must have all columns filled for every row.
+- Do NOT split a single table row across multiple lines — each row must be one line.
+
+**Paragraphs and spacing:**
+- Do NOT insert orphan dots (`.`) or empty lines with just a period between paragraphs.
+- Use standard Markdown paragraph spacing: one blank line between paragraphs, nothing else.
+- Quoted text should flow naturally into the paragraph, not be placed on isolated lines.
+
+**Principles (PART II):**
+- Number each principle sequentially (1, 2, 3...).
+- Each principle follows the pattern: Name → Description (italic) → Rationale → Violation consequence.
+- Rationale text should be integrated into the paragraph, not separated by dots or blank markers.
+
+**General:**
+- No HTML tags. Pure Markdown only.
+- No trailing pipes or broken table rows.
+- The document must render cleanly in GitHub's Markdown renderer.
 """
 
 TRANSLATE_PROMPT = """Translate the following Living Pattern document from English to Polish.
