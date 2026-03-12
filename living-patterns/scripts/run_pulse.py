@@ -539,7 +539,21 @@ def run_r3(client, issue_number, comments, area, objective_function, context, to
         log(f"  Chunk 1: {len(chunk1)} chars, Chunk 2: {len(chunk2)} chars")
 
         # Translate chunk 1
-        prompt1 = TRANSLATE_PROMPT.format(document=chunk1) + "\n\nIMPORTANT: This is PART 1 of a larger document. Translate completely — the rest follows in a separate request."
+        prompt1 = f"""Translate the following Living Pattern document from English to Polish.
+
+RULES:
+- Natural, fluent Polish — NOT machine translation
+- Technical terms that have no good Polish equivalent stay in English (API, framework, compliance, etc.)
+- Metric names and section headers in Polish
+- Maintain all Markdown formatting exactly
+- Keep source references in original language
+- The tone should be professional but accessible — as if a Polish expert wrote it originally
+- This is PART 1 of a split document. Translate it completely. Do NOT add any notes about this being a partial document.
+- Your output must contain ONLY the translated text — no translator notes, no comments, no instructions.
+
+DOCUMENT TO TRANSLATE:
+{chunk1}
+"""
         log("  Translating chunk 1...")
         pl_chunk1 = call_api(client, prompt1, model=SONNET, max_tokens=16000, use_web_search=False)
         log(f"  Chunk 1 PL: {len(pl_chunk1)} chars")
@@ -549,7 +563,21 @@ def run_r3(client, issue_number, comments, area, objective_function, context, to
         time.sleep(RATE_LIMIT_PAUSE)
 
         # Translate chunk 2
-        prompt2 = TRANSLATE_PROMPT.format(document=chunk2) + "\n\nIMPORTANT: This is PART 2 of a larger document, continuing from a previous section. Translate completely. Maintain consistent terminology with the first part."
+        prompt2 = f"""Translate the following Living Pattern document from English to Polish.
+
+RULES:
+- Natural, fluent Polish — NOT machine translation
+- Technical terms that have no good Polish equivalent stay in English (API, framework, compliance, etc.)
+- Metric names and section headers in Polish
+- Maintain all Markdown formatting exactly
+- Keep source references in original language
+- The tone should be professional but accessible — as if a Polish expert wrote it originally
+- This is PART 2 of a split document, continuing from a previous section. Maintain consistent terminology.
+- Your output must contain ONLY the translated text — no translator notes, no comments, no instructions.
+
+DOCUMENT TO TRANSLATE:
+{chunk2}
+"""
         log("  Translating chunk 2...")
         pl_chunk2 = call_api(client, prompt2, model=SONNET, max_tokens=16000, use_web_search=False)
         log(f"  Chunk 2 PL: {len(pl_chunk2)} chars")

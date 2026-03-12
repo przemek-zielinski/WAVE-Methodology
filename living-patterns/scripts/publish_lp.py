@@ -88,19 +88,33 @@ DOCUMENT:
             chunk1 = en_content[:split_pos].strip()
             chunk2 = en_content[split_pos:].strip()
 
-            p1 = f"""Translate the following Living Pattern document (PART 1) from English to Polish.
-RULES: Natural fluent Polish, keep technical English terms, maintain Markdown formatting.
+            p1 = f"""Translate the following Living Pattern document from English to Polish.
 
-DOCUMENT PART 1:
+RULES:
+- Natural, fluent Polish — NOT machine translation
+- Technical terms that have no good Polish equivalent stay in English
+- Maintain all Markdown formatting exactly
+- Professional but accessible tone
+- This is PART 1 of a split document. Translate it completely.
+- Your output must contain ONLY the translated text — no translator notes, no comments, no instructions.
+
+DOCUMENT TO TRANSLATE:
 {chunk1}
 """
             pl1 = call_api(client, p1, model=SONNET, max_tokens=16000, use_web_search=False)
             time.sleep(RATE_LIMIT_PAUSE)
 
-            p2 = f"""Translate the following Living Pattern document (PART 2, continuation) from English to Polish.
-RULES: Natural fluent Polish, keep technical English terms, maintain Markdown formatting. Consistent terminology with Part 1.
+            p2 = f"""Translate the following Living Pattern document from English to Polish.
 
-DOCUMENT PART 2:
+RULES:
+- Natural, fluent Polish — NOT machine translation
+- Technical terms that have no good Polish equivalent stay in English
+- Maintain all Markdown formatting exactly
+- Professional but accessible tone
+- This is PART 2 of a split document. Maintain consistent terminology with Part 1.
+- Your output must contain ONLY the translated text — no translator notes, no comments, no instructions.
+
+DOCUMENT TO TRANSLATE:
 {chunk2}
 """
             pl2 = call_api(client, p2, model=SONNET, max_tokens=16000, use_web_search=False)
