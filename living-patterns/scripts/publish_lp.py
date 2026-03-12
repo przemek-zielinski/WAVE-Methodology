@@ -166,9 +166,9 @@ Reply with ONLY the category name in lowercase. Nothing else."""
     from datetime import date
     today = date.today().isoformat()
 
-    # Repair broken markdown tables before saving
-    en_content = repair_markdown_tables(en_content)
-    pl_content = repair_markdown_tables(pl_content)
+    # Cleanup markdown (tables + orphan dots) before saving
+    en_content = cleanup_markdown(en_content)
+    pl_content = cleanup_markdown(pl_content)
 
     create_or_update_file(
         branch_name, file_en, en_content,

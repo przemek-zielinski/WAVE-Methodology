@@ -421,3 +421,28 @@ def repair_markdown_tables(text):
         broken_count = len(lines) - len(repaired)
         log(f"  Table repair: merged {broken_count} broken line(s)")
     return result
+
+
+def fix_orphan_dots(text):
+    """
+    Fix orphan dots — periods that end up alone on a new line
+    instead of staying at the end of the previous sentence.
+    
+    Pattern: line of text\n.\n → line of text.\n
+    """
+    # Fix: line ending without period, followed by line with just a dot
+    result = re.sub(r'([^\.\n])\s*\n\s*\.\s*\n', r'\1.\n', text)
+    # Fix: line ending without period, followed by line starting with dot and space
+    result = re.sub(r'([^\.\n])\s*\n\s*\.\s+', r'\1. ', result)
+    # Remove standalone dot lines (just "." on a line by itself)
+    result = re.sub(r'\n\s*\.\s*\n', '\n\n', result)
+    if result != text:
+        log(f"  Orphan dots: fixed")
+    return result
+
+
+def cleanup_markdown(text):
+    """Combined markdown cleanup: tables + orphan dots."""
+    text = repair_markdown_tables(text)
+    text = fix_orphan_dots(text)
+    return text
