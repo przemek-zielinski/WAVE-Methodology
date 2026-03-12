@@ -122,20 +122,47 @@ DOCUMENT TO TRANSLATE:
 
         log(f"Translation generated: {len(pl_content)} chars")
 
-    # 3. Determine file names
+    # 3. Classify broad domain category (for file prefix)
+    log("Classifying domain category...")
+    client = get_anthropic_client()
+    classify_prompt = f"""Classify this solution domain into exactly ONE broad category.
+
+Domain: {domain}
+Area: {area}
+
+Choose from: healthcare, education, logistics, finance, manufacturing, agriculture, legal, energy, retail, government, technology, science, media, other
+
+Reply with ONLY the category name in lowercase. Nothing else."""
+
+    try:
+        category = call_api(client, classify_prompt, model=SONNET, max_tokens=20, use_web_search=False)
+        category = category.strip().lower().split()[0].strip(".,")
+        # Validate against known categories
+        valid = {"healthcare", "education", "logistics", "finance", "manufacturing",
+                 "agriculture", "legal", "energy", "retail", "government",
+                 "technology", "science", "media", "other"}
+        if category not in valid:
+            log(f"  Unknown category '{category}', falling back to 'other'")
+            category = "other"
+    except Exception as e:
+        log(f"  Classification failed: {e}, falling back to 'other'")
+        category = "other"
+    log(f"  Category: {category}")
+
+    # 4. Determine file names
     slug = slugify(f"{domain}_{area}" if area else domain)
-    file_en = f"living-patterns/patterns/official/LP_{slug}_v1_EN.md"
-    file_pl = f"living-patterns/patterns/official/LP_{slug}_v1_PL.md"
+    file_en = f"living-patterns/patterns/official/LP_{category}_{slug}_v1_EN.md"
+    file_pl = f"living-patterns/patterns/official/LP_{category}_{slug}_v1_PL.md"
     branch_name = f"lp/{slug}"
     log(f"Files: {file_en}, {file_pl}")
     log(f"Branch: {branch_name}")
 
-    # 4. Create branch
+    # 5. Create branch
     default_branch = get_default_branch()
     base_sha = get_branch_sha(default_branch)
     create_branch(branch_name, base_sha)
 
-    # 5. Create files
+    # 6. Create files
     from datetime import date
     today = date.today().isoformat()
 
@@ -148,9 +175,10 @@ DOCUMENT TO TRANSLATE:
         f"Add Living Pattern: {domain} — {area} (PL)"
     )
 
-    # 6. Create Pull Request
+    # 7. Create Pull Request
     pr_body = f"""## 📋 New Living Pattern: {domain} — {area}
 
+**Category:** {category}
 **Source:** Issue #{issue_number}
 **Rounds:** {version_note}
 **Files:**
@@ -174,7 +202,7 @@ DOCUMENT TO TRANSLATE:
     pr_number = pr.get("number", "?")
     log(f"PR created: #{pr_number} — {pr_url}")
 
-    # 7. Comment on Issue with PR link
+    # 8. Comment on Issue with PR link
     add_comment(issue_number, f"""## ✅ Living Pattern Published as PR
 
 Pull Request: **#{pr_number}** — {pr_url}
