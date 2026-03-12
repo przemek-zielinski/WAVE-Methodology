@@ -53,7 +53,10 @@ def main():
         log("WARNING: No PL translation found. Generating from EN...")
         # Generate PL translation
         client = get_anthropic_client()
-        translate_prompt = f"""Translate the following Living Pattern document from English to Polish.
+        # For long documents, split translation into chunks
+        CHUNK_THRESHOLD = 12000
+        if len(en_content) <= CHUNK_THRESHOLD:
+            translate_prompt = f"""Translate the following Living Pattern document from English to Polish.
 
 RULES:
 - Natural, fluent Polish — NOT machine translation
@@ -62,9 +65,47 @@ RULES:
 - Professional but accessible tone
 
 DOCUMENT:
-{en_content[:14000]}
+{en_content}
 """
-        pl_content = call_api(client, translate_prompt, model=SONNET, max_tokens=8000, use_web_search=False)
+            pl_content = call_api(client, translate_prompt, model=SONNET, max_tokens=16000, use_web_search=False)
+        else:
+            log(f"Long document ({len(en_content)} chars) — chunked translation")
+            import time
+            midpoint = len(en_content) // 2
+            # Find nearest ## PART boundary
+            split_pos = -1
+            for marker_text in ["## PART ", "## CZĘŚĆ ", "## CHANGELOG"]:
+                search_zone = en_content[midpoint - 2000 : midpoint + 4000]
+                idx = search_zone.rfind(marker_text)
+                if idx >= 0:
+                    split_pos = midpoint - 2000 + idx
+                    break
+            if split_pos < 0:
+                search_zone = en_content[midpoint - 1000 : midpoint + 1000]
+                idx = search_zone.rfind("\n\n")
+                split_pos = midpoint - 1000 + idx if idx >= 0 else midpoint
+
+            chunk1 = en_content[:split_pos].strip()
+            chunk2 = en_content[split_pos:].strip()
+
+            p1 = f"""Translate the following Living Pattern document (PART 1) from English to Polish.
+RULES: Natural fluent Polish, keep technical English terms, maintain Markdown formatting.
+
+DOCUMENT PART 1:
+{chunk1}
+"""
+            pl1 = call_api(client, p1, model=SONNET, max_tokens=16000, use_web_search=False)
+            time.sleep(RATE_LIMIT_PAUSE)
+
+            p2 = f"""Translate the following Living Pattern document (PART 2, continuation) from English to Polish.
+RULES: Natural fluent Polish, keep technical English terms, maintain Markdown formatting. Consistent terminology with Part 1.
+
+DOCUMENT PART 2:
+{chunk2}
+"""
+            pl2 = call_api(client, p2, model=SONNET, max_tokens=16000, use_web_search=False)
+            pl_content = pl1.rstrip() + "\n\n" + pl2.lstrip()
+
         log(f"Translation generated: {len(pl_content)} chars")
 
     # 3. Determine file names

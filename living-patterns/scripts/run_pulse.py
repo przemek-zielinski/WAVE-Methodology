@@ -485,7 +485,7 @@ def run_r3(client, issue_number, comments, area, objective_function, context, to
     ) + correction_text
 
     log("Calling API for R3 — English (with web search)...")
-    result_en = call_api(client, prompt, model=SONNET, max_tokens=8000, use_web_search=True)
+    result_en = call_api(client, prompt, model=SONNET, max_tokens=16000, use_web_search=True)
     log(f"R3 EN: {len(result_en)} chars")
 
     # Post EN version
@@ -506,11 +506,57 @@ def run_r3(client, issue_number, comments, area, objective_function, context, to
     import time
     time.sleep(RATE_LIMIT_PAUSE)
 
-    # --- Translation to Polish ---
-    log("Calling API for Polish translation...")
-    translate_prompt = TRANSLATE_PROMPT.format(document=result_en[:14000])
-    result_pl = call_api(client, translate_prompt, model=SONNET, max_tokens=8000, use_web_search=False)
-    log(f"R3 PL: {len(result_pl)} chars")
+    # --- Translation to Polish (chunked for long documents) ---
+    CHUNK_THRESHOLD = 12000  # chars — above this, split into two API calls
+
+    if len(result_en) <= CHUNK_THRESHOLD:
+        # Short document — single pass
+        log(f"Translation: single pass ({len(result_en)} chars)")
+        translate_prompt = TRANSLATE_PROMPT.format(document=result_en)
+        result_pl = call_api(client, translate_prompt, model=SONNET, max_tokens=16000, use_web_search=False)
+    else:
+        # Long document — split at a PART boundary near the middle
+        log(f"Translation: chunked mode ({len(result_en)} chars, threshold={CHUNK_THRESHOLD})")
+        midpoint = len(result_en) // 2
+        # Find nearest "## PART" or "## CZĘŚĆ" boundary around midpoint
+        split_pos = -1
+        for marker_text in ["## PART ", "## CZĘŚĆ ", "## CHANGELOG", "## DZIENNIK"]:
+            # Search backward from midpoint+3000 to find a good split
+            search_zone = result_en[midpoint - 2000 : midpoint + 4000]
+            idx = search_zone.rfind(marker_text)
+            if idx >= 0:
+                split_pos = midpoint - 2000 + idx
+                break
+
+        if split_pos < 0:
+            # Fallback: split at double newline nearest to midpoint
+            search_zone = result_en[midpoint - 1000 : midpoint + 1000]
+            idx = search_zone.rfind("\n\n")
+            split_pos = midpoint - 1000 + idx if idx >= 0 else midpoint
+
+        chunk1 = result_en[:split_pos].strip()
+        chunk2 = result_en[split_pos:].strip()
+        log(f"  Chunk 1: {len(chunk1)} chars, Chunk 2: {len(chunk2)} chars")
+
+        # Translate chunk 1
+        prompt1 = TRANSLATE_PROMPT.format(document=chunk1) + "\n\nIMPORTANT: This is PART 1 of a larger document. Translate completely — the rest follows in a separate request."
+        log("  Translating chunk 1...")
+        pl_chunk1 = call_api(client, prompt1, model=SONNET, max_tokens=16000, use_web_search=False)
+        log(f"  Chunk 1 PL: {len(pl_chunk1)} chars")
+
+        # Pause between chunks
+        log(f"  Pausing {RATE_LIMIT_PAUSE}s between chunks...")
+        time.sleep(RATE_LIMIT_PAUSE)
+
+        # Translate chunk 2
+        prompt2 = TRANSLATE_PROMPT.format(document=chunk2) + "\n\nIMPORTANT: This is PART 2 of a larger document, continuing from a previous section. Translate completely. Maintain consistent terminology with the first part."
+        log("  Translating chunk 2...")
+        pl_chunk2 = call_api(client, prompt2, model=SONNET, max_tokens=16000, use_web_search=False)
+        log(f"  Chunk 2 PL: {len(pl_chunk2)} chars")
+
+        result_pl = pl_chunk1.rstrip() + "\n\n" + pl_chunk2.lstrip()
+
+    log(f"R3 PL total: {len(result_pl)} chars (EN was {len(result_en)} chars, ratio: {len(result_pl)/max(len(result_en),1):.2f})")
 
     marker_pl = MARKERS["r3_pl"]
     comment_pl = f"""{marker_pl}
