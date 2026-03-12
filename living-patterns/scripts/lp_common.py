@@ -314,3 +314,110 @@ def slugify(text):
     text = re.sub(r"[\s_]+", "_", text)
     text = re.sub(r"-+", "_", text)
     return text.strip("_")[:60]
+
+
+# ---------------------------------------------------------------------------
+# Markdown table repair
+# ---------------------------------------------------------------------------
+
+def repair_markdown_tables(text):
+    """
+    Fix broken markdown tables where rows are split across multiple lines.
+    
+    Problem: AI models sometimes break a table row into 2+ lines, which destroys
+    markdown rendering. This function detects and merges broken rows.
+    
+    Rules:
+    - A table row is a line that starts and ends with |
+    - A separator row matches |---|
+    - If we're inside a table and a line doesn't start with |, 
+      merge it into the previous row
+    - If a line starts with | but the previous table row seems incomplete
+      (fewer | than the header), merge it too
+    """
+    lines = text.split("\n")
+    if not lines:
+        return text
+
+    repaired = []
+    in_table = False
+    table_cols = 0  # number of | in header row
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Detect table header/separator
+        is_table_row = stripped.startswith("|") and stripped.endswith("|")
+        is_separator = bool(re.match(r"^\|[\s\-:|]+\|$", stripped))
+
+        if is_separator:
+            in_table = True
+            repaired.append(line)
+            continue
+
+        if is_table_row and not in_table:
+            # Might be start of a table (header row) — count columns
+            table_cols = stripped.count("|")
+            repaired.append(line)
+            continue
+
+        if in_table:
+            if is_table_row:
+                # Normal table row — check if it has enough columns
+                col_count = stripped.count("|")
+                if col_count >= table_cols - 1:
+                    # Complete row
+                    repaired.append(line)
+                else:
+                    # Incomplete row — merge with previous
+                    if repaired:
+                        prev = repaired[-1].rstrip()
+                        if prev.endswith("|"):
+                            repaired[-1] = prev + " " + stripped.lstrip("|")
+                        else:
+                            repaired[-1] = prev + " " + stripped
+                    else:
+                        repaired.append(line)
+            elif stripped == "":
+                # Empty line ends the table
+                in_table = False
+                table_cols = 0
+                repaired.append(line)
+            elif stripped.startswith("|") or "|" in stripped:
+                # Broken continuation with pipes — merge with previous row
+                if repaired:
+                    prev = repaired[-1].rstrip()
+                    if prev.endswith("|"):
+                        # Previous row ended with pipe, this continues it
+                        repaired[-1] = prev + " " + stripped
+                    else:
+                        repaired[-1] = prev + " " + stripped
+                else:
+                    repaired.append(line)
+            elif not stripped.startswith("#") and not stripped.startswith("*"):
+                # Non-table text while in table context — merge with previous
+                if repaired and repaired[-1].strip().startswith("|"):
+                    prev = repaired[-1].rstrip()
+                    if prev.endswith("|"):
+                        # Insert into last cell
+                        repaired[-1] = prev[:-1] + " " + stripped + " |"
+                    else:
+                        repaired[-1] = prev + " " + stripped
+                else:
+                    # Actually leaving the table
+                    in_table = False
+                    table_cols = 0
+                    repaired.append(line)
+            else:
+                # Header or other markdown — table ended
+                in_table = False
+                table_cols = 0
+                repaired.append(line)
+        else:
+            repaired.append(line)
+
+    result = "\n".join(repaired)
+    if result != text:
+        broken_count = len(lines) - len(repaired)
+        log(f"  Table repair: merged {broken_count} broken line(s)")
+    return result

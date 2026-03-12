@@ -166,6 +166,10 @@ Reply with ONLY the category name in lowercase. Nothing else."""
     from datetime import date
     today = date.today().isoformat()
 
+    # Repair broken markdown tables before saving
+    en_content = repair_markdown_tables(en_content)
+    pl_content = repair_markdown_tables(pl_content)
+
     create_or_update_file(
         branch_name, file_en, en_content,
         f"Add Living Pattern: {domain} — {area} (EN)"

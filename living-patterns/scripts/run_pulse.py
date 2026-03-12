@@ -507,6 +507,9 @@ def run_r3(client, issue_number, comments, area, objective_function, context, to
     result_en = call_api(client, prompt, model=SONNET, max_tokens=16000, use_web_search=True)
     log(f"R3 EN: {len(result_en)} chars")
 
+    # Repair broken markdown tables
+    result_en = repair_markdown_tables(result_en)
+
     # Post EN version
     marker_en = MARKERS["r3_en"]
     comment_en = f"""{marker_en}
@@ -602,6 +605,9 @@ DOCUMENT TO TRANSLATE:
         log(f"  Chunk 2 PL: {len(pl_chunk2)} chars")
 
         result_pl = pl_chunk1.rstrip() + "\n\n" + pl_chunk2.lstrip()
+
+    # Repair broken markdown tables in PL
+    result_pl = repair_markdown_tables(result_pl)
 
     log(f"R3 PL total: {len(result_pl)} chars (EN was {len(result_en)} chars, ratio: {len(result_pl)/max(len(result_en),1):.2f})")
 
