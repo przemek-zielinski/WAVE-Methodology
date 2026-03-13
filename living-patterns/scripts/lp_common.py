@@ -634,9 +634,86 @@ def fix_orphan_bullets(text):
     return result
 
 
+def remove_duplicate_headers(text):
+    """
+    Remove duplicate title blocks that the model sometimes generates.
+    
+    Problem: Model writes the title twice:
+        Living Pattern: Intelligent Demand Sensing
+        Round 2 — Verification Delta
+        Living Pattern: Intelligent Demand Sensing
+        Round 2 — Verification Delta
+        GAPS FOUND
+    
+    Fix: Detect consecutive duplicate header pairs and remove the first occurrence.
+    """
+    lines = text.split("\n")
+    if len(lines) < 4:
+        return text
+    
+    # Find sequences where the same title block appears twice
+    i = 0
+    cleaned = []
+    while i < len(lines):
+        # Look ahead: does lines[i:i+k] repeat at lines[i+k:i+2k]?
+        found_dup = False
+        for block_size in range(1, 5):  # check blocks of 1-4 lines
+            if i + 2 * block_size > len(lines):
+                break
+            block1 = [lines[i + j].strip() for j in range(block_size)]
+            block2 = [lines[i + block_size + j].strip() for j in range(block_size)]
+            # Check if both blocks are non-empty and identical
+            if (block1 == block2 and 
+                all(b for b in block1) and
+                any(b.startswith("#") or "Living Pattern" in b or "Round" in b or "Runda" in b for b in block1)):
+                # Skip first occurrence, keep second
+                i += block_size
+                found_dup = True
+                log(f"  Duplicate header: removed {block_size}-line duplicate")
+                break
+        if not found_dup:
+            cleaned.append(lines[i])
+            i += 1
+    
+    return "\n".join(cleaned)
+
+
+def fix_malformed_separators(text):
+    """
+    Remove malformed table separator continuation lines.
+    
+    Problem: Model generates broken separator rows:
+        |-------|----------|-------------|
+        | ------------ | | |
+        Behavioral Bias Blindness | Critical...
+    
+    The second line is a garbage separator. Remove it.
+    """
+    lines = text.split("\n")
+    cleaned = []
+    
+    for line in lines:
+        stripped = line.strip()
+        # Detect lines that look like malformed separators:
+        # contain only |, -, spaces, and are mostly dashes/pipes
+        if stripped.startswith("|") and stripped.endswith("|"):
+            # Remove pipes and spaces, check what's left
+            content = stripped.replace("|", "").replace("-", "").replace(" ", "").strip()
+            if content == "" and stripped.count("-") > 3:
+                # This is a separator-like line — check if previous line is already a separator
+                if cleaned and re.match(r"^\|[\s\-:|]+\|$", cleaned[-1].strip()):
+                    log(f"  Malformed separator: removed duplicate separator line")
+                    continue
+        cleaned.append(line)
+    
+    return "\n".join(cleaned)
+
+
 def cleanup_markdown(text):
-    """Combined markdown cleanup: concatenated rows + tables + orphan dots + broken lines + orphan bullets."""
-    text = split_concatenated_table_rows(text)  # MUST run before repair_markdown_tables
+    """Combined markdown cleanup: all fixes in optimal order."""
+    text = remove_duplicate_headers(text)
+    text = fix_malformed_separators(text)
+    text = split_concatenated_table_rows(text)
     text = repair_markdown_tables(text)
     text = fix_orphan_dots(text)
     text = fix_broken_lines(text)
