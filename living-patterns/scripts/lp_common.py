@@ -2,7 +2,7 @@
 WAVE Living Patterns — Pipeline Shared Module
 Common utilities: Anthropic API (with web search), GitHub API, parsing.
 """
-
+ 
 import os
 import sys
 import time
@@ -10,29 +10,29 @@ import json
 import re
 import requests
 from anthropic import Anthropic
-
+ 
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
-
+ 
 def log(msg):
     """Print to stderr so GitHub Actions captures it in logs."""
     print(msg, file=sys.stderr, flush=True)
-
+ 
 # ---------------------------------------------------------------------------
 # Anthropic API
 # ---------------------------------------------------------------------------
-
+ 
 SONNET = "claude-sonnet-4-20250514"
 OPUS = "claude-sonnet-4-20250514"   # TODO: switch to Opus when testing confirms stability
-
+ 
 RATE_LIMIT_PAUSE = 65  # seconds between API calls (Tier 1 safety)
-
-
+ 
+ 
 def get_anthropic_client():
     return Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-
-
+ 
+ 
 def call_api(client, prompt, model=SONNET, max_tokens=4000, use_web_search=False):
     """
     Call Anthropic API. With web search, response may contain multiple block types.
@@ -47,29 +47,29 @@ def call_api(client, prompt, model=SONNET, max_tokens=4000, use_web_search=False
         kwargs["tools"] = [
             {"type": "web_search_20250305", "name": "web_search", "max_uses": 5}
         ]
-
+ 
     try:
         log(f"  API call: model={model}, max_tokens={max_tokens}, web_search={use_web_search}")
         response = client.messages.create(**kwargs)
-
+ 
         # Extract text from ALL content blocks (web search adds non-text blocks)
         text_parts = []
         for block in response.content:
             if hasattr(block, "text") and block.text:
                 text_parts.append(block.text)
-
+ 
         result = "\n".join(text_parts).strip()
-
+ 
         if not result:
             if use_web_search:
                 log("  WARNING: empty text with web search. Retrying without...")
                 time.sleep(5)
                 return call_api(client, prompt, model, max_tokens, use_web_search=False)
             raise ValueError("API returned empty text content")
-
+ 
         log(f"  API response: {len(result)} chars, stop={response.stop_reason}")
         return result
-
+ 
     except Exception as e:
         error_msg = str(e)
         if "rate_limit" in error_msg.lower() or "429" in error_msg:
@@ -82,19 +82,19 @@ def call_api(client, prompt, model=SONNET, max_tokens=4000, use_web_search=False
             return call_api(client, prompt, model, max_tokens, use_web_search=False)
         log(f"  API ERROR: {e}")
         raise
-
-
+ 
+ 
 def call_api_with_pause(client, prompt, **kwargs):
     """Call API then pause for rate limit safety."""
     result = call_api(client, prompt, **kwargs)
     log(f"  Pausing {RATE_LIMIT_PAUSE}s for rate limit...")
     time.sleep(RATE_LIMIT_PAUSE)
     return result
-
+ 
 # ---------------------------------------------------------------------------
 # GitHub API
 # ---------------------------------------------------------------------------
-
+ 
 def _gh_headers():
     token = os.environ.get("GITHUB_TOKEN", "")
     return {
@@ -102,50 +102,50 @@ def _gh_headers():
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
-
-
+ 
+ 
 def _gh_url(endpoint):
     repo = os.environ["GITHUB_REPOSITORY"]
     return f"https://api.github.com/repos/{repo}{endpoint}"
-
-
+ 
+ 
 def gh_get(endpoint):
     r = requests.get(_gh_url(endpoint), headers=_gh_headers())
     r.raise_for_status()
     return r.json()
-
-
+ 
+ 
 def gh_post(endpoint, data):
     r = requests.post(_gh_url(endpoint), headers=_gh_headers(), json=data)
     r.raise_for_status()
     return r.json() if r.text.strip() else None
-
-
+ 
+ 
 def gh_put(endpoint, data):
     r = requests.put(_gh_url(endpoint), headers=_gh_headers(), json=data)
     r.raise_for_status()
     return r.json() if r.text.strip() else None
-
-
+ 
+ 
 def gh_patch(endpoint, data):
     r = requests.patch(_gh_url(endpoint), headers=_gh_headers(), json=data)
     r.raise_for_status()
     return r.json() if r.text.strip() else None
-
-
+ 
+ 
 def gh_delete(endpoint):
     try:
         requests.delete(_gh_url(endpoint), headers=_gh_headers())
     except Exception:
         pass
-
-
+ 
+ 
 # --- Issue helpers ---
-
+ 
 def get_issue(number):
     return gh_get(f"/issues/{number}")
-
-
+ 
+ 
 def get_issue_comments(number):
     """Get all comments, sorted oldest first."""
     comments = []
@@ -159,26 +159,26 @@ def get_issue_comments(number):
             break
         page += 1
     return comments
-
-
+ 
+ 
 def add_comment(number, body):
     """Add comment to issue. Truncates if over GitHub limit."""
     MAX_LEN = 65000
     if len(body) > MAX_LEN:
         body = body[:MAX_LEN] + "\n\n---\n*[Truncated — exceeded GitHub comment limit]*"
     return gh_post(f"/issues/{number}/comments", {"body": body})
-
-
+ 
+ 
 def add_label(number, label):
     return gh_post(f"/issues/{number}/labels", {"labels": [label]})
-
-
+ 
+ 
 def remove_label(number, label):
     gh_delete(f"/issues/{number}/labels/{label}")
-
-
+ 
+ 
 # --- Comment search helpers ---
-
+ 
 MARKERS = {
     "scan":   "<!-- LP_SCAN -->",
     "r1":     "<!-- LP_R1 -->",
@@ -186,8 +186,8 @@ MARKERS = {
     "r3_en":  "<!-- LP_R3_EN -->",
     "r3_pl":  "<!-- LP_R3_PL -->",
 }
-
-
+ 
+ 
 def find_comment(comments, marker_key):
     """Find the LAST comment containing the specified marker."""
     marker = MARKERS[marker_key]
@@ -195,8 +195,8 @@ def find_comment(comments, marker_key):
         if marker in c["body"]:
             return c["body"]
     return None
-
-
+ 
+ 
 def extract_lp_content(comment_body, marker_key):
     """Extract Living Pattern content from comment, removing wrapper."""
     marker = MARKERS[marker_key]
@@ -206,8 +206,8 @@ def extract_lp_content(comment_body, marker_key):
     if footer_idx > 0:
         body = body[:footer_idx].strip()
     return body
-
-
+ 
+ 
 def find_corrections(comments, after_marker_key):
     """Find correction comments posted after the last stage result."""
     marker = MARKERS[after_marker_key]
@@ -216,10 +216,10 @@ def find_corrections(comments, after_marker_key):
     for i, c in enumerate(comments):
         if marker in c["body"]:
             stage_idx = i
-
+ 
     if stage_idx < 0:
         return []
-
+ 
     corrections = []
     for c in comments[stage_idx + 1:]:
         body = c["body"].strip()
@@ -229,20 +229,20 @@ def find_corrections(comments, after_marker_key):
             body.lower().startswith("korekta:")):
             corrections.append(body)
     return corrections
-
-
+ 
+ 
 # --- Git/PR helpers ---
-
+ 
 def get_default_branch():
     repo_info = gh_get("")
     return repo_info.get("default_branch", "main")
-
-
+ 
+ 
 def get_branch_sha(branch):
     ref = gh_get(f"/git/ref/heads/{branch}")
     return ref["object"]["sha"]
-
-
+ 
+ 
 def create_branch(name, from_sha):
     try:
         gh_post("/git/refs", {"ref": f"refs/heads/{name}", "sha": from_sha})
@@ -253,13 +253,13 @@ def create_branch(name, from_sha):
             gh_patch(f"/git/refs/heads/{name}", {"sha": from_sha, "force": True})
         else:
             raise
-
-
+ 
+ 
 def create_or_update_file(branch, path, content, message):
     """Create or update a file in the repo on the given branch."""
     import base64
     encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
-
+ 
     # Check if file exists
     try:
         existing = gh_get(f"/contents/{path}?ref={branch}")
@@ -277,8 +277,8 @@ def create_or_update_file(branch, path, content, message):
             "branch": branch,
         })
     log(f"  File written: {path}")
-
-
+ 
+ 
 def create_pull_request(title, body, head_branch, base_branch):
     return gh_post("/pulls", {
         "title": title,
@@ -286,12 +286,12 @@ def create_pull_request(title, body, head_branch, base_branch):
         "head": head_branch,
         "base": base_branch,
     })
-
-
+ 
+ 
 # ---------------------------------------------------------------------------
 # Parsing utilities
 # ---------------------------------------------------------------------------
-
+ 
 def parse_domain_from_title(title):
     """Extract domain name from proposal Issue title."""
     # Format: "📋 LP Proposal: Living Pattern: [Domain] — [Area]"
@@ -305,8 +305,8 @@ def parse_domain_from_title(title):
     if len(parts) > 1:
         return parts[-1].strip(), ""
     return title.strip(), ""
-
-
+ 
+ 
 def slugify(text):
     """Convert text to filename-safe slug."""
     text = text.lower().strip()
@@ -314,12 +314,12 @@ def slugify(text):
     text = re.sub(r"[\s_]+", "_", text)
     text = re.sub(r"-+", "_", text)
     return text.strip("_")[:60]
-
-
+ 
+ 
 # ---------------------------------------------------------------------------
 # Markdown table repair
 # ---------------------------------------------------------------------------
-
+ 
 def repair_markdown_tables(text):
     """
     Fix broken markdown tables where rows are split across multiple lines.
@@ -338,29 +338,29 @@ def repair_markdown_tables(text):
     lines = text.split("\n")
     if not lines:
         return text
-
+ 
     repaired = []
     in_table = False
     table_cols = 0  # number of | in header row
-
+ 
     for line in lines:
         stripped = line.strip()
-
+ 
         # Detect table header/separator
         is_table_row = stripped.startswith("|") and stripped.endswith("|")
         is_separator = bool(re.match(r"^\|[\s\-:|]+\|$", stripped))
-
+ 
         if is_separator:
             in_table = True
             repaired.append(line)
             continue
-
+ 
         if is_table_row and not in_table:
             # Might be start of a table (header row) — count columns
             table_cols = stripped.count("|")
             repaired.append(line)
             continue
-
+ 
         if in_table:
             if is_table_row:
                 # Normal table row — check if it has enough columns
@@ -415,14 +415,14 @@ def repair_markdown_tables(text):
                 repaired.append(line)
         else:
             repaired.append(line)
-
+ 
     result = "\n".join(repaired)
     if result != text:
         broken_count = len(lines) - len(repaired)
         log(f"  Table repair: merged {broken_count} broken line(s)")
     return result
-
-
+ 
+ 
 def fix_orphan_dots(text):
     """
     Fix orphan dots — periods that end up alone on a new line
@@ -439,8 +439,8 @@ def fix_orphan_dots(text):
     if result != text:
         log(f"  Orphan dots: fixed")
     return result
-
-
+ 
+ 
 def fix_broken_lines(text):
     """
     Fix broken prose lines — where a sentence is split across two lines
@@ -525,8 +525,8 @@ def fix_broken_lines(text):
         if merged > 0:
             log(f"  Broken lines: merged {merged} continuation(s)")
     return result
-
-
+ 
+ 
 def split_concatenated_table_rows(text):
     """
     Fix tables where the separator row and data rows are all on one line.
@@ -589,8 +589,8 @@ def split_concatenated_table_rows(text):
             repaired.append(line)
     
     return "\n".join(repaired)
-
-
+ 
+ 
 def fix_orphan_bullets(text):
     """
     Fix orphan bullet points where the bullet marker is on one line
@@ -625,8 +625,8 @@ def fix_orphan_bullets(text):
     if result != text:
         log(f"  Orphan bullets: fixed")
     return result
-
-
+ 
+ 
 def remove_duplicate_headers(text):
     """
     Remove duplicate title blocks that the model sometimes generates.
@@ -669,8 +669,8 @@ def remove_duplicate_headers(text):
             i += 1
     
     return "\n".join(cleaned)
-
-
+ 
+ 
 def fix_malformed_separators(text):
     """
     Fix table separator issues that prevent GitHub rendering:
@@ -751,8 +751,8 @@ def fix_malformed_separators(text):
         cleaned.append(line)
     
     return "\n".join(cleaned)
-
-
+ 
+ 
 def cleanup_markdown(text):
     """Combined markdown cleanup: all fixes in optimal order."""
     text = remove_duplicate_headers(text)
@@ -763,14 +763,14 @@ def cleanup_markdown(text):
     text = fix_broken_lines(text)
     text = fix_orphan_bullets(text)
     return text
-
-
+ 
+ 
 # ---------------------------------------------------------------------------
 # Translation prompt (shared across all pipeline stages)
 # ---------------------------------------------------------------------------
-
+ 
 TRANSLATE_PROMPT = """Translate the following document from English to Polish.
-
+ 
 RULES:
 - Natural, fluent Polish — NOT machine translation. Write as if a Polish expert wrote it originally.
 - USE POLISH EQUIVALENTS where they exist naturally in professional Polish:
@@ -785,7 +785,7 @@ RULES:
 - Keep source references (author names, report titles, DOIs) in original language
 - The tone should be professional but accessible
 - Your output must contain ONLY the translated text — no translator notes, no comments, no instructions.
-
+ 
 DOCUMENT TO TRANSLATE:
 {document}
 """
