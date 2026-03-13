@@ -673,78 +673,81 @@ def remove_duplicate_headers(text):
 
 def fix_malformed_separators(text):
     """
-    Fix two problems with malformed table lines:
-    1. Duplicate separator lines (pure garbage — remove)
-    2. Lines mixing garbage cells (dashes/empty) with real data — strip garbage, make rows
+    Fix table separator issues that prevent GitHub rendering:
+    1. Separator has fewer columns than header → pad to match
+    2. Garbage lines after separator (empty cells + dashes) → remove
     
-    Pattern from real output:
-        | Error | Severity | Consequence | Prevention |     ← header (4 cols)
-        |-------|----------|-------------|                   ← incomplete separator
-        | ------------ | | | Real Data | Critical | ... |   ← garbage prefix + data
+    Root cause: model generates incomplete separators or junk lines,
+    and GitHub requires EXACT column match between header and separator.
     """
     lines = text.split("\n")
     cleaned = []
-    last_header_cols = 0
     
     for line in lines:
         stripped = line.strip()
         
+        # Only process lines starting with |
         if not stripped.startswith("|"):
-            # Non-table line — reset header tracking if blank
-            if stripped == "":
-                last_header_cols = 0
             cleaned.append(line)
             continue
         
-        # Count pipes in this line
-        cells = [c.strip() for c in stripped.split("|")[1:]]  # skip empty first element
+        # Parse cells (split by |, skip empty first/last from leading/trailing |)
+        parts = stripped.split("|")
+        cells = [p.strip() for p in parts[1:]]
         if cells and cells[-1] == "":
-            cells = cells[:-1]  # skip empty last element (trailing |)
+            cells = cells[:-1]
         
-        # Classify each cell
-        garbage_cells = []
-        data_cells = []
-        for cell in cells:
-            is_garbage = (cell == "" or re.match(r'^[\-:\s]+$', cell))
-            if is_garbage:
-                garbage_cells.append(cell)
-            else:
-                data_cells.append(cell)
+        # Is this a separator-like line? (cells are only dashes, colons, or empty)
+        is_separator = len(cells) > 0 and all(
+            re.match(r'^[\-:\s]*$', c) for c in cells
+        ) and any("-" in c for c in cells)
         
-        # Pure header row (all data, no dashes) — track column count
-        if data_cells and not garbage_cells and not any("-" in c for c in cells):
-            last_header_cols = len(cells)
-            cleaned.append(line)
-            continue
+        # Is this a pure garbage line? (all cells empty or very short dashes)
+        is_garbage = len(cells) > 0 and all(
+            c == "" or re.match(r'^[\-\s]+$', c) for c in cells
+        )
         
-        # Pure separator (all dashes) — keep it, pad if incomplete, skip if duplicate
-        if not data_cells and garbage_cells and any("-" in c for c in garbage_cells):
-            # Skip if previous line is already a separator
-            if cleaned and re.match(r'^\|[\s\-:|]+\|$', cleaned[-1].strip()):
-                continue
-            if last_header_cols > 0:
-                sep = "| " + " | ".join(["---"] * last_header_cols) + " |"
+        if is_separator or is_garbage:
+            # Find the header — last non-separator, non-garbage | line above us
+            header_cols = 0
+            for prev in reversed(cleaned):
+                prev_s = prev.strip()
+                if not prev_s.startswith("|"):
+                    break
+                # Check if this previous line is a real content row (not separator)
+                prev_cells = [p.strip() for p in prev_s.split("|")[1:]]
+                if prev_cells and prev_cells[-1] == "":
+                    prev_cells = prev_cells[:-1]
+                prev_has_text = any(c and not re.match(r'^[\-:\s]*$', c) for c in prev_cells)
+                if prev_has_text:
+                    header_cols = len(prev_cells)
+                    break
+            
+            if is_separator and header_cols >= 2:
+                # Skip if previous line is already a valid separator
+                if cleaned and re.match(r'^\|[\s\-:|]+\|$', cleaned[-1].strip()):
+                    continue
+                # Pad separator to match header
+                sep = "| " + " | ".join(["---"] * header_cols) + " |"
                 cleaned.append(sep)
-            else:
+                continue
+            
+            if is_garbage:
+                # Skip garbage lines entirely (duplicate separators, empty rows)
+                if cleaned and re.match(r'^\|[\s\-:|]+\|$', cleaned[-1].strip()):
+                    log(f"  Table fix: removed garbage line after separator")
+                    continue
+                # Garbage not after separator — might be malformed separator itself
+                if header_cols >= 2:
+                    if not any(re.match(r'^\|[\s\-:|]+\|$', c.strip()) for c in cleaned[-3:] if c.strip().startswith("|")):
+                        sep = "| " + " | ".join(["---"] * header_cols) + " |"
+                        cleaned.append(sep)
+                    continue
+                # Can't determine context — keep it
                 cleaned.append(line)
-            continue
+                continue
         
-        # Mixed line: garbage + data — strip garbage, split data into rows
-        if data_cells and garbage_cells and last_header_cols >= 2:
-            row_cells = []
-            for cell in data_cells:
-                row_cells.append(cell)
-                if len(row_cells) == last_header_cols:
-                    cleaned.append("| " + " | ".join(row_cells) + " |")
-                    row_cells = []
-            if row_cells:
-                while len(row_cells) < last_header_cols:
-                    row_cells.append("")
-                cleaned.append("| " + " | ".join(row_cells) + " |")
-            log(f"  Table fix: split garbage+data line into rows ({last_header_cols} cols, {len(data_cells)} data cells)")
-            continue
-        
-        # Normal table row
+        # Normal content row — keep as-is
         cleaned.append(line)
     
     return "\n".join(cleaned)
