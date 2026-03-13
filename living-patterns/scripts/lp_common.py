@@ -541,10 +541,7 @@ def split_concatenated_table_rows(text):
         | Row1 data | Critical | Bad things | Fix it |
         | Row2 data | Serious | ... |
     
-    Algorithm:
-    1. Find separator rows that have trailing content
-    2. Count expected columns from header
-    3. Split trailing content into rows of N cells each
+    Simple approach: detect separator with trailing content, split by column count.
     """
     lines = text.split("\n")
     repaired = []
@@ -553,8 +550,6 @@ def split_concatenated_table_rows(text):
         stripped = line.strip()
         
         # Detect separator with trailing content: |---|---|---| some text...
-        # A clean separator looks like: |---|---|---|
-        # A broken one looks like: |---|---|---| Implementing AI models...
         sep_match = re.match(r'^(\|[\s\-:|]+\|)(.*\S.*)$', stripped)
         if sep_match:
             separator_part = sep_match.group(1).strip()
@@ -570,7 +565,6 @@ def split_concatenated_table_rows(text):
             repaired.append(separator_part)
             
             # Split trailing content into table rows
-            # Remove leading/trailing pipes and split by |
             content = trailing_content.strip("|").strip()
             cells = [c.strip() for c in content.split("|")]
             
@@ -583,9 +577,8 @@ def split_concatenated_table_rows(text):
                     repaired.append(row_line)
                     row_cells = []
             
-            # Handle leftover cells (incomplete last row)
+            # Handle leftover cells
             if row_cells:
-                # Pad with empty cells
                 while len(row_cells) < num_cols:
                     row_cells.append("")
                 row_line = "| " + " | ".join(row_cells) + " |"
@@ -680,30 +673,78 @@ def remove_duplicate_headers(text):
 
 def fix_malformed_separators(text):
     """
-    Remove malformed table separator continuation lines.
+    Fix two problems with malformed table lines:
+    1. Duplicate separator lines (pure garbage — remove)
+    2. Lines mixing garbage cells (dashes/empty) with real data — strip garbage, make rows
     
-    Problem: Model generates broken separator rows:
-        |-------|----------|-------------|
-        | ------------ | | |
-        Behavioral Bias Blindness | Critical...
-    
-    The second line is a garbage separator. Remove it.
+    Pattern from real output:
+        | Error | Severity | Consequence | Prevention |     ← header (4 cols)
+        |-------|----------|-------------|                   ← incomplete separator
+        | ------------ | | | Real Data | Critical | ... |   ← garbage prefix + data
     """
     lines = text.split("\n")
     cleaned = []
+    last_header_cols = 0
     
     for line in lines:
         stripped = line.strip()
-        # Detect lines that look like malformed separators:
-        # contain only |, -, spaces, and are mostly dashes/pipes
-        if stripped.startswith("|") and stripped.endswith("|"):
-            # Remove pipes and spaces, check what's left
-            content = stripped.replace("|", "").replace("-", "").replace(" ", "").strip()
-            if content == "" and stripped.count("-") > 3:
-                # This is a separator-like line — check if previous line is already a separator
-                if cleaned and re.match(r"^\|[\s\-:|]+\|$", cleaned[-1].strip()):
-                    log(f"  Malformed separator: removed duplicate separator line")
-                    continue
+        
+        if not stripped.startswith("|"):
+            # Non-table line — reset header tracking if blank
+            if stripped == "":
+                last_header_cols = 0
+            cleaned.append(line)
+            continue
+        
+        # Count pipes in this line
+        cells = [c.strip() for c in stripped.split("|")[1:]]  # skip empty first element
+        if cells and cells[-1] == "":
+            cells = cells[:-1]  # skip empty last element (trailing |)
+        
+        # Classify each cell
+        garbage_cells = []
+        data_cells = []
+        for cell in cells:
+            is_garbage = (cell == "" or re.match(r'^[\-:\s]+$', cell))
+            if is_garbage:
+                garbage_cells.append(cell)
+            else:
+                data_cells.append(cell)
+        
+        # Pure header row (all data, no dashes) — track column count
+        if data_cells and not garbage_cells and not any("-" in c for c in cells):
+            last_header_cols = len(cells)
+            cleaned.append(line)
+            continue
+        
+        # Pure separator (all dashes) — keep it, pad if incomplete, skip if duplicate
+        if not data_cells and garbage_cells and any("-" in c for c in garbage_cells):
+            # Skip if previous line is already a separator
+            if cleaned and re.match(r'^\|[\s\-:|]+\|$', cleaned[-1].strip()):
+                continue
+            if last_header_cols > 0:
+                sep = "| " + " | ".join(["---"] * last_header_cols) + " |"
+                cleaned.append(sep)
+            else:
+                cleaned.append(line)
+            continue
+        
+        # Mixed line: garbage + data — strip garbage, split data into rows
+        if data_cells and garbage_cells and last_header_cols >= 2:
+            row_cells = []
+            for cell in data_cells:
+                row_cells.append(cell)
+                if len(row_cells) == last_header_cols:
+                    cleaned.append("| " + " | ".join(row_cells) + " |")
+                    row_cells = []
+            if row_cells:
+                while len(row_cells) < last_header_cols:
+                    row_cells.append("")
+                cleaned.append("| " + " | ".join(row_cells) + " |")
+            log(f"  Table fix: split garbage+data line into rows ({last_header_cols} cols, {len(data_cells)} data cells)")
+            continue
+        
+        # Normal table row
         cleaned.append(line)
     
     return "\n".join(cleaned)

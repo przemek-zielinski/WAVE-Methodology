@@ -268,6 +268,18 @@ If you add a sub-table or extra section — fill it fully.
 
 One row per line in tables. Pure Markdown, no HTML. Clean rendering on GitHub.
 
+**CRITICAL TABLE FORMAT:** Each table row MUST be its own line. The separator row must stand alone. Never put data after the separator on the same line.
+
+WRONG (all data on one line):
+| Error | Severity | Prevention |
+|---|---|---| First error | High | Fix it | Second error | Low | Monitor |
+
+CORRECT (each row separate):
+| Error | Severity | Prevention |
+|---|---|---|
+| First error | High | Fix it |
+| Second error | Low | Monitor |
+
 That's it. Create freely, fill completely.
 """
 
