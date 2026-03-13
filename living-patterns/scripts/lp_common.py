@@ -527,11 +527,120 @@ def fix_broken_lines(text):
     return result
 
 
+def split_concatenated_table_rows(text):
+    """
+    Fix tables where the separator row and data rows are all on one line.
+    
+    Problem: AI model generates:
+        | Error | Severity | Consequence | Prevention |
+        |---|---|---|---| Row1 data | Critical | Bad things | Fix it | Row2 data | Serious | ...
+    
+    Should be:
+        | Error | Severity | Consequence | Prevention |
+        |---|---|---|---|
+        | Row1 data | Critical | Bad things | Fix it |
+        | Row2 data | Serious | ... |
+    
+    Algorithm:
+    1. Find separator rows that have trailing content
+    2. Count expected columns from header
+    3. Split trailing content into rows of N cells each
+    """
+    lines = text.split("\n")
+    repaired = []
+    
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        
+        # Detect separator with trailing content: |---|---|---| some text...
+        # A clean separator looks like: |---|---|---|
+        # A broken one looks like: |---|---|---| Implementing AI models...
+        sep_match = re.match(r'^(\|[\s\-:|]+\|)(.*\S.*)$', stripped)
+        if sep_match:
+            separator_part = sep_match.group(1).strip()
+            trailing_content = sep_match.group(2).strip()
+            
+            # Count columns from separator
+            num_cols = separator_part.count("|") - 1
+            if num_cols < 2:
+                repaired.append(line)
+                continue
+            
+            # Add clean separator
+            repaired.append(separator_part)
+            
+            # Split trailing content into table rows
+            # Remove leading/trailing pipes and split by |
+            content = trailing_content.strip("|").strip()
+            cells = [c.strip() for c in content.split("|")]
+            
+            # Group cells into rows of num_cols
+            row_cells = []
+            for cell in cells:
+                row_cells.append(cell)
+                if len(row_cells) == num_cols:
+                    row_line = "| " + " | ".join(row_cells) + " |"
+                    repaired.append(row_line)
+                    row_cells = []
+            
+            # Handle leftover cells (incomplete last row)
+            if row_cells:
+                # Pad with empty cells
+                while len(row_cells) < num_cols:
+                    row_cells.append("")
+                row_line = "| " + " | ".join(row_cells) + " |"
+                repaired.append(row_line)
+            
+            log(f"  Table split: separated concatenated rows ({num_cols} cols)")
+        else:
+            repaired.append(line)
+    
+    return "\n".join(repaired)
+
+
+def fix_orphan_bullets(text):
+    """
+    Fix orphan bullet points where the bullet marker is on one line
+    and the content is on the next line (optionally with a blank line between).
+    
+    Problem patterns:
+        •                           →   • Source text here
+        Source text here
+        
+        •                           →   • Source text here
+                                    
+        Source text here
+        
+        - \\n content               →   - content
+    """
+    # Pattern 1: bullet (• or -) alone on line, blank line, then content
+    result = re.sub(
+        r'^(\s*[•\-])\s*\n\s*\n(\s*)(\S)',
+        r'\1 \3',
+        text,
+        flags=re.MULTILINE
+    )
+    
+    # Pattern 2: bullet (• or -) alone on line, content on next line (no blank between)
+    result = re.sub(
+        r'^(\s*[•\-])\s*\n(\s*)([A-ZŻŹĆŁŚĄĘÓŃa-ząćęłńóśźż\d"\'])',
+        r'\1 \3',
+        result,
+        flags=re.MULTILINE
+    )
+    
+    if result != text:
+        log(f"  Orphan bullets: fixed")
+    return result
+
+
 def cleanup_markdown(text):
-    """Combined markdown cleanup: tables + orphan dots + broken lines."""
+    """Combined markdown cleanup: concatenated rows + tables + orphan dots + broken lines + orphan bullets."""
+    text = split_concatenated_table_rows(text)  # MUST run before repair_markdown_tables
     text = repair_markdown_tables(text)
     text = fix_orphan_dots(text)
     text = fix_broken_lines(text)
+    text = fix_orphan_bullets(text)
     return text
 
 
