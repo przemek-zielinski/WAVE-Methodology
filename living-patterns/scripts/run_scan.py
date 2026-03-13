@@ -80,11 +80,13 @@ Write in English. Use Markdown.
 
 ## Stage 2: Scoring
 
-| # | Area | Impact (1-10) | Risk of Omission (1-10) | Knowledge Available (1-10) | Total | Selected |
-|---|------|:------------:|:----------------------:|:-------------------------:|:-----:|:--------:|
-| 1 | ... | 9 | 8 | 7 | 24 | ✅ |
-| 2 | ... | 7 | 6 | 5 | 18 | ❌ |
-| ... | ... | ... | ... | ... | ... | ... |
+| # | Area | Impact (1-10) | Risk of Omission (1-10) | Knowledge Available (1-10) | Total | Rationale | Selected |
+|---|------|:------------:|:----------------------:|:-------------------------:|:-----:|-----------|:--------:|
+| 1 | ... | 9 | 8 | 7 | 24 | core dependency | ✅ |
+| 2 | ... | 7 | 6 | 5 | 18 | established field | ❌ |
+| ... | ... | ... | ... | ... | ... | ... | ... |
+
+For each row, the **Rationale** column must contain 2-4 words explaining the key reason behind the scores (e.g. "legal liability risk", "mature knowledge base", "emerging threat landscape", "well-established practices").
 
 ## Selected Areas (detailed)
 
@@ -137,7 +139,7 @@ CONSTRAINTS: [relevant constraints]
 
 ## FORMATTING RULE
 
-Write flowing prose — do NOT break sentences across lines. When citing research findings, integrate them into the paragraph naturally. Do not put quoted text on a separate line.
+Write flowing prose — do NOT break sentences across lines. Every sentence must be on ONE line, no matter how long. When citing research findings or statistics, integrate them into the sentence naturally — never put a quoted number or phrase on a separate line.
 
 Wrong:
 ```

@@ -441,10 +441,97 @@ def fix_orphan_dots(text):
     return result
 
 
+def fix_broken_lines(text):
+    """
+    Fix broken prose lines — where a sentence is split across two lines
+    despite having room to continue on the same line.
+    
+    Problem: AI models sometimes break mid-sentence at citation boundaries:
+        "Research reveals a landscape where\n70% of organizations will adopt AI\n, yet..."
+    Should be: "Research reveals a landscape where 70% of organizations will adopt AI, yet..."
+    
+    Rules:
+    - Only merge lines that are clearly continuation of prose (not markdown elements)
+    - Don't touch: headers (#), lists (- or *), tables (|), blank lines, code blocks (```)
+    - Don't touch: lines that start a new paragraph (after blank line)
+    - Merge: lines that start with lowercase, digit, comma, period, or opening paren
+      and follow a non-blank, non-structural line
+    """
+    lines = text.split("\n")
+    if len(lines) < 2:
+        return text
+    
+    repaired = [lines[0]]
+    in_code_block = lines[0].strip().startswith("```")
+    
+    for i in range(1, len(lines)):
+        current = lines[i]
+        stripped = current.strip()
+        prev_stripped = repaired[-1].strip() if repaired else ""
+        
+        # Track code blocks — don't touch anything inside
+        if stripped.startswith("```"):
+            in_code_block = not in_code_block
+            repaired.append(current)
+            continue
+        
+        if in_code_block:
+            repaired.append(current)
+            continue
+        
+        # Don't merge if current line is a structural markdown element
+        if (stripped == "" or                          # blank line
+            stripped.startswith("#") or                # header
+            stripped.startswith("-") or                # unordered list
+            stripped.startswith("*") or                # unordered list / bold start
+            stripped.startswith("|") or                # table
+            stripped.startswith(">") or                # blockquote
+            stripped.startswith("```") or              # code block
+            re.match(r"^\d+\.", stripped) or           # ordered list
+            stripped.startswith("---") or              # horizontal rule
+            stripped.startswith("**") or               # bold line start
+            stripped.startswith("AREA:") or            # PULSE params
+            stripped.startswith("OBJECTIVE") or        # PULSE params
+            stripped.startswith("CONTEXT:") or         # PULSE params
+            stripped.startswith("CONSTRAINTS:")):      # PULSE params
+            repaired.append(current)
+            continue
+        
+        # Don't merge if previous line is blank or structural
+        if (prev_stripped == "" or
+            prev_stripped.startswith("#") or
+            prev_stripped.startswith("|") or
+            prev_stripped.startswith("```") or
+            prev_stripped.startswith("---")):
+            repaired.append(current)
+            continue
+        
+        # Current line looks like a continuation of prose — merge it
+        # (starts with lowercase, digit, comma, period, or is a quoted fragment)
+        if (stripped[0].islower() or 
+            stripped[0].isdigit() or 
+            stripped[0] in ",;.)'" or
+            (prev_stripped.endswith(",") or 
+             prev_stripped.endswith("(") or
+             (prev_stripped[-1:].isalpha() and not prev_stripped.endswith(".")))):
+            # Merge with previous line
+            repaired[-1] = repaired[-1].rstrip() + " " + stripped
+        else:
+            repaired.append(current)
+    
+    result = "\n".join(repaired)
+    if result != text:
+        merged = len(lines) - len(repaired)
+        if merged > 0:
+            log(f"  Broken lines: merged {merged} continuation(s)")
+    return result
+
+
 def cleanup_markdown(text):
-    """Combined markdown cleanup: tables + orphan dots."""
+    """Combined markdown cleanup: tables + orphan dots + broken lines."""
     text = repair_markdown_tables(text)
     text = fix_orphan_dots(text)
+    text = fix_broken_lines(text)
     return text
 
 
@@ -455,12 +542,18 @@ def cleanup_markdown(text):
 TRANSLATE_PROMPT = """Translate the following document from English to Polish.
 
 RULES:
-- Natural, fluent Polish — NOT machine translation
-- Technical terms that have no good Polish equivalent stay in English (API, framework, compliance, etc.)
+- Natural, fluent Polish — NOT machine translation. Write as if a Polish expert wrote it originally.
+- USE POLISH EQUIVALENTS where they exist naturally in professional Polish:
+  compliance → zgodność, best practices → najlepsze praktyki, framework → ramy/struktura,
+  data lineage → rodowód danych, traceability → identyfikowalność, emerging → wschodzący/nowy,
+  stakeholder → interesariusz, scalability → skalowalność, governance → zarządzanie/nadzór,
+  use case → przypadek użycia, workflow → przepływ pracy, bottleneck → wąskie gardło,
+  deployment → wdrożenie, drift → dryf/dryfowanie, adversarial → kontradyktoryjny.
+- Terms WITHOUT good Polish equivalent stay in English: API, ERP, AI, ROI, GDPR, SOX, SaaS, DevOps, CI/CD.
 - Metric names and section headers in Polish
 - Maintain all Markdown formatting exactly
-- Keep source references in original language
-- The tone should be professional but accessible — as if a Polish expert wrote it originally
+- Keep source references (author names, report titles, DOIs) in original language
+- The tone should be professional but accessible
 - Your output must contain ONLY the translated text — no translator notes, no comments, no instructions.
 
 DOCUMENT TO TRANSLATE:

@@ -579,12 +579,12 @@ def run_r3(client, issue_number, comments, area, objective_function, context, to
         prompt1 = f"""Translate the following Living Pattern document from English to Polish.
 
 RULES:
-- Natural, fluent Polish — NOT machine translation
-- Technical terms that have no good Polish equivalent stay in English (API, framework, compliance, etc.)
+- Natural, fluent Polish — NOT machine translation. Write as if a Polish expert wrote it originally.
+- USE POLISH EQUIVALENTS where they exist naturally: compliance → zgodność, best practices → najlepsze praktyki, framework → ramy/struktura, data lineage → rodowód danych, traceability → identyfikowalność, emerging → wschodzący/nowy, governance → zarządzanie/nadzór, workflow → przepływ pracy, bottleneck → wąskie gardło, deployment → wdrożenie, drift → dryf.
+- Terms WITHOUT good Polish equivalent stay in English: API, ERP, AI, ROI, GDPR, SOX, SaaS, DevOps, CI/CD.
 - Metric names and section headers in Polish
 - Maintain all Markdown formatting exactly
 - Keep source references in original language
-- The tone should be professional but accessible — as if a Polish expert wrote it originally
 - This is PART 1 of a split document. Translate it completely. Do NOT add any notes about this being a partial document.
 - Your output must contain ONLY the translated text — no translator notes, no comments, no instructions.
 
@@ -603,12 +603,12 @@ DOCUMENT TO TRANSLATE:
         prompt2 = f"""Translate the following Living Pattern document from English to Polish.
 
 RULES:
-- Natural, fluent Polish — NOT machine translation
-- Technical terms that have no good Polish equivalent stay in English (API, framework, compliance, etc.)
+- Natural, fluent Polish — NOT machine translation. Write as if a Polish expert wrote it originally.
+- USE POLISH EQUIVALENTS where they exist naturally: compliance → zgodność, best practices → najlepsze praktyki, framework → ramy/struktura, data lineage → rodowód danych, traceability → identyfikowalność, emerging → wschodzący/nowy, governance → zarządzanie/nadzór, workflow → przepływ pracy, bottleneck → wąskie gardło, deployment → wdrożenie, drift → dryf.
+- Terms WITHOUT good Polish equivalent stay in English: API, ERP, AI, ROI, GDPR, SOX, SaaS, DevOps, CI/CD.
 - Metric names and section headers in Polish
 - Maintain all Markdown formatting exactly
 - Keep source references in original language
-- The tone should be professional but accessible — as if a Polish expert wrote it originally
 - This is PART 2 of a split document, continuing from a previous section. Maintain consistent terminology.
 - Your output must contain ONLY the translated text — no translator notes, no comments, no instructions.
 

@@ -59,10 +59,13 @@ def main():
             translate_prompt = f"""Translate the following Living Pattern document from English to Polish.
 
 RULES:
-- Natural, fluent Polish — NOT machine translation
-- Technical terms that have no good Polish equivalent stay in English
+- Natural, fluent Polish — NOT machine translation. Write as if a Polish expert wrote it originally.
+- USE POLISH EQUIVALENTS where they exist naturally: compliance → zgodność, best practices → najlepsze praktyki, framework → ramy/struktura, data lineage → rodowód danych, traceability → identyfikowalność, emerging → wschodzący/nowy, governance → zarządzanie/nadzór, workflow → przepływ pracy, bottleneck → wąskie gardło, deployment → wdrożenie, drift → dryf.
+- Terms WITHOUT good Polish equivalent stay in English: API, ERP, AI, ROI, GDPR, SOX, SaaS, DevOps, CI/CD.
+- Metric names and section headers in Polish
 - Maintain all Markdown formatting exactly
-- Professional but accessible tone
+- Keep source references in original language
+- Your output must contain ONLY the translated text — no translator notes, no comments, no instructions.
 
 DOCUMENT:
 {en_content}
@@ -91,10 +94,12 @@ DOCUMENT:
             p1 = f"""Translate the following Living Pattern document from English to Polish.
 
 RULES:
-- Natural, fluent Polish — NOT machine translation
-- Technical terms that have no good Polish equivalent stay in English
+- Natural, fluent Polish — NOT machine translation. Write as if a Polish expert wrote it originally.
+- USE POLISH EQUIVALENTS where they exist naturally: compliance → zgodność, best practices → najlepsze praktyki, framework → ramy/struktura, data lineage → rodowód danych, traceability → identyfikowalność, emerging → wschodzący/nowy, governance → zarządzanie/nadzór, workflow → przepływ pracy, bottleneck → wąskie gardło, deployment → wdrożenie, drift → dryf.
+- Terms WITHOUT good Polish equivalent stay in English: API, ERP, AI, ROI, GDPR, SOX, SaaS, DevOps, CI/CD.
+- Metric names and section headers in Polish
 - Maintain all Markdown formatting exactly
-- Professional but accessible tone
+- Keep source references in original language
 - This is PART 1 of a split document. Translate it completely.
 - Your output must contain ONLY the translated text — no translator notes, no comments, no instructions.
 
@@ -107,10 +112,12 @@ DOCUMENT TO TRANSLATE:
             p2 = f"""Translate the following Living Pattern document from English to Polish.
 
 RULES:
-- Natural, fluent Polish — NOT machine translation
-- Technical terms that have no good Polish equivalent stay in English
+- Natural, fluent Polish — NOT machine translation. Write as if a Polish expert wrote it originally.
+- USE POLISH EQUIVALENTS where they exist naturally: compliance → zgodność, best practices → najlepsze praktyki, framework → ramy/struktura, data lineage → rodowód danych, traceability → identyfikowalność, emerging → wschodzący/nowy, governance → zarządzanie/nadzór, workflow → przepływ pracy, bottleneck → wąskie gardło, deployment → wdrożenie, drift → dryf.
+- Terms WITHOUT good Polish equivalent stay in English: API, ERP, AI, ROI, GDPR, SOX, SaaS, DevOps, CI/CD.
+- Metric names and section headers in Polish
 - Maintain all Markdown formatting exactly
-- Professional but accessible tone
+- Keep source references in original language
 - This is PART 2 of a split document. Maintain consistent terminology with Part 1.
 - Your output must contain ONLY the translated text — no translator notes, no comments, no instructions.
 
